@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Inventory Background Generator</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            max-width: 100%;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 15px;
+            background: #4b6cb7;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Inventory Management System Background Generator</h1>
+    <div class="controls">
+        <button onclick="generateWarehouseBackground()">Generate Warehouse Background</button>
+        <button onclick="generateDigitalBackground()">Generate Digital Background</button>
+        <button onclick="generateHybridBackground()">Generate Hybrid Background</button>
+        <button onclick="downloadImage()">Download Image</button>
+    </div>
+    <canvas id="backgroundCanvas" width="1920" height="1080"></canvas>
+
+    <script>
+        const canvas = document.getElementById('backgroundCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Function to generate a gradient
+        function createGradient(colors) {
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            colors.forEach((color, index) => {
+                gradient.addColorStop(index / (colors.length - 1), color);
+            });
+            return gradient;
+        }
+        
+        // Function to draw warehouse shelves
+        function drawWarehousShelves() {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 2;
+            
+            // Horizontal shelves
+            for (let y = canvas.height * 0.2; y < canvas.height; y += canvas.height * 0.2) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // Vertical supports
+            for (let x = canvas.width * 0.1; x < canvas.width; x += canvas.width * 0.1) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            // Draw some boxes on shelves
+            for (let i = 0; i < 50; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.floor(Math.random() * 5) * canvas.height * 0.2;
+                const width = 50 + Math.random() * 100;
+                const height = 40 + Math.random() * 40;
+                
+                ctx.fillStyle = `rgba(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, 0.3)`;
+                ctx.fillRect(x, y, width, height);
+            }
+        }
+        
+        // Function to draw digital elements
+        function drawDigitalElements() {
+            // Draw circuit-like patterns
+            ctx.strokeStyle = 'rgba(100, 149, 237, 0.3)';
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i < 20; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                
+                // Draw random circuit patterns
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + 100 + Math.random() * 200, y);
+                ctx.lineTo(x + 150 + Math.random() * 200, y + 80 + Math.random() * 100);
+                ctx.stroke();
+                
+                // Add small circles at junctions
+                ctx.fillStyle = 'rgba(100, 149, 237, 0.4)';
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Draw bar charts
+            for (let i = 0; i < 3; i++) {
+                const chartX = Math.random() * (canvas.width - 200);
+                const chartY = Math.random() * (canvas.height - 200);
+                const chartWidth = 150;
+                const chartHeight = 100;
+                
+                // Draw chart background
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+                ctx.fillRect(chartX, chartY, chartWidth, chartHeight);
+                
+                // Draw bars
+                for (let j = 0; j < 5; j++) {
+                    const barHeight = Math.random() * chartHeight * 0.8;
+                    ctx.fillStyle = `rgba(70, 130, 180, ${0.3 + Math.random() * 0.3})`;
+                    ctx.fillRect(chartX + j * (chartWidth / 5) + 5, chartY + chartHeight - barHeight, (chartWidth / 5) - 10, barHeight);
+                }
+            }
+            
+            // Add binary code snippets
+            ctx.font = '12px monospace';
+            ctx.fillStyle = 'rgba(144, 238, 144, 0.3)';
+            
+            for (let i = 0; i < 15; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                let binaryString = '';
+                
+                for (let j = 0; j < 20; j++) {
+                    binaryString += Math.round(Math.random());
+                }
+                
+                ctx.fillText(binaryString, x, y);
+            }
+        }
+        
+        // Generate warehouse background
+        function generateWarehouseBackground() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Create background gradient
+            const gradient = createGradient(['#182848', '#4b6cb7']);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Add grid pattern
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            
+            // Vertical lines
+            for (let x = 0; x < canvas.width; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            // Horizontal lines
+            for (let y = 0; y < canvas.height; y += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // Draw warehouse elements
+            drawWarehousShelves();
+        }
+        
+        // Generate digital background
+        function generateDigitalBackground() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Create background gradient
+            const gradient = createGradient(['#0f2027', '#203a43', '#2c5364']);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw digital elements
+            drawDigitalElements();
+            
+            // Add some abstract data flows
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 3;
+            
+            for (let i = 0; i < 10; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, Math.random() * canvas.height);
+                
+                // Create wavy line across screen
+                for (let x = 0; x < canvas.width; x += 50) {
+                    const y = (Math.random() * canvas.height / 5) + (i * canvas.height / 10);
+                    ctx.lineTo(x, y);
+                }
+                
+                ctx.stroke();
+            }
+        }
+        
+        // Generate hybrid background
+        function generateHybridBackground() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Create background gradient
+            const gradient = createGradient(['#0f2027', '#203a43', '#2c5364']);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw warehouse elements with reduced opacity
+            ctx.globalAlpha = 0.7;
+            drawWarehousShelves();
+            
+            // Draw digital elements
+            ctx.globalAlpha = 1;
+            drawDigitalElements();
+            
+            // Add overlay texture
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            for (let i = 0; i < 200; i++) {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                const size = 1 + Math.random() * 3;
+                ctx.fillRect(x, y, size, size);
+            }
+        }
+        
+        // Function to download the image
+        function downloadImage() {
+            const link = document.createElement('a');
+            link.download = 'inventory-background.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+        
+        // Initial generation
+        generateHybridBackground();
+    </script>
+</body>
+</html>
