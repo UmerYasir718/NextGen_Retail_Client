@@ -130,7 +130,7 @@ const Login = () => {
             Sign up
           </Link>
         </p>
-
+        {/* 
         <div className="mt-4">
           <p className="text-xs text-gray-500 mb-2">Demo Accounts:</p>
           <div className="text-xs text-gray-500 grid grid-cols-1 gap-1">
@@ -140,7 +140,7 @@ const Login = () => {
             <p>Analyst: analyst@company1.com / Password123</p>
             <p>Auditor: auditor@company1.com / Password123</p>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );
