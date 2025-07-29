@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import DataTable from "react-data-table-component";
 import { toast } from "react-toastify";
-import { warehouseAPI } from "../../utils/helpfunction";
-
-import { formatDate } from "../../utils/helpfunction";
+import warehouseAPI from "../../utils/api/warehouseAPI";
+import { formatDate, exportToCSV } from "../../utils/helpfunction";
+import WarehouseModal from "../../components/warehouse/WarehouseModal";
 
 const WarehousesManagement = () => {
   const { user } = useSelector((state) => state.auth);
@@ -15,6 +15,7 @@ const WarehousesManagement = () => {
   const [error, setError] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState(null);
 
   useEffect(() => {
@@ -178,10 +179,14 @@ const WarehousesManagement = () => {
     },
     {
       name: "Capacity Utilization",
-      selector: (row) => row.utilized / row.capacity,
+      selector: (row) => row.utilization?.utilizationPercentage,
       sortable: true,
       cell: (row) => {
-        const percentage = Math.round((row.utilized / row.capacity) * 100);
+        const percentage = Math.round(
+          (row.utilization?.utilizationPercentage ||
+            0 / row.utilization?.capacityValue ||
+            0) * 100
+        );
         let bgColor = "bg-green-500";
         if (percentage > 90) {
           bgColor = "bg-red-500";
@@ -194,7 +199,8 @@ const WarehousesManagement = () => {
             <div className="flex justify-between text-xs mb-1">
               <span>{percentage}%</span>
               <span>
-                {row.utilized} / {row.capacity}
+                {row.utilization?.utilizationValue} /{" "}
+                {row.utilization?.capacityValue}
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2.5">
@@ -250,7 +256,13 @@ const WarehousesManagement = () => {
           >
             Edit
           </button>
-          <button className="px-2 py-1 text-xs bg-purple-500 text-white rounded hover:bg-purple-600">
+          <button 
+            className="px-2 py-1 text-xs bg-purple-500 text-white rounded hover:bg-purple-600"
+            onClick={() => {
+              setSelectedWarehouse(row);
+              setShowViewModal(true);
+            }}
+          >
             View
           </button>
         </div>
@@ -307,12 +319,20 @@ const WarehousesManagement = () => {
             onChange={(e) => setFilterText(e.target.value)}
           />
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowAddModal(true)}
-        >
-          Add New Warehouse
-        </button>
+        <div className="flex space-x-2">
+          <button
+            className="btn btn-secondary"
+            onClick={() => exportToCSV(filteredData, 'warehouses')}
+          >
+            Download CSV
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowAddModal(true)}
+          >
+            Add New Warehouse
+          </button>
+        </div>
       </div>
 
       {/* Warehouse Stats */}
@@ -397,6 +417,31 @@ const WarehousesManagement = () => {
           }
         />
       </div>
+
+      {/* Add Warehouse Modal */}
+      <WarehouseModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        mode="add"
+        onSubmit={() => fetchInventoryData()}
+      />
+
+      {/* Edit Warehouse Modal */}
+      <WarehouseModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        mode="edit"
+        initialData={selectedWarehouse}
+        onSubmit={() => fetchInventoryData()}
+      />
+
+      {/* View Warehouse Modal */}
+      <WarehouseModal
+        isOpen={showViewModal}
+        onClose={() => setShowViewModal(false)}
+        mode="view"
+        initialData={selectedWarehouse}
+      />
     </div>
   );
 };

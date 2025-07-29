@@ -2,21 +2,33 @@ import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
 import DataTable from "react-data-table-component";
+import { toast } from "react-toastify";
+import binAPI from "../../utils/api/binAPI";
+import shelfAPI from "../../utils/api/shelfAPI";
+import zoneAPI from "../../utils/api/zoneAPI";
+import warehouseAPI from "../../utils/api/warehouseAPI";
 
 const BinManagement = () => {
   const { user } = useSelector((state) => state.auth);
+  const { selectedCompany } = useSelector((state) => state.company);
   const location = useLocation();
-  
+
   // Get shelfId from URL query params if available
   const queryParams = new URLSearchParams(location.search);
-  const shelfIdFromUrl = queryParams.get("shelfId") ? parseInt(queryParams.get("shelfId")) : null;
+  const shelfIdFromUrl = queryParams.get("shelfId")
+    ? parseInt(queryParams.get("shelfId"))
+    : null;
 
   const [filterText, setFilterText] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedBin, setSelectedBin] = useState(null);
   const [selectedShelf, setSelectedShelf] = useState(shelfIdFromUrl);
+  const [zones, setZones] = useState([]);
   const [shelves, setShelves] = useState([]);
+  const [bins, setBins] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Form state for new/edit bin
   const [binForm, setBinForm] = useState({
@@ -28,187 +40,74 @@ const BinManagement = () => {
     status: "active",
   });
 
-  // Sample data for bins
-  const binsData = [
-    {
-      id: 1,
-      name: "Bin A1-1",
-      description: "Electronics - Smartphones",
-      shelfId: 1,
-      shelfName: "Shelf A1",
-      zoneId: 1,
-      zoneName: "Zone A",
-      warehouseId: 1,
-      warehouseName: "Main Distribution Center",
-      type: "standard",
-      capacity: 50,
-      utilized: 35,
-      itemCount: 12,
-      status: "active",
-      lastUpdated: "2023-06-15",
-    },
-    {
-      id: 2,
-      name: "Bin A1-2",
-      description: "Electronics - Tablets",
-      shelfId: 1,
-      shelfName: "Shelf A1",
-      zoneId: 1,
-      zoneName: "Zone A",
-      warehouseId: 1,
-      warehouseName: "Main Distribution Center",
-      type: "standard",
-      capacity: 50,
-      utilized: 20,
-      itemCount: 8,
-      status: "active",
-      lastUpdated: "2023-06-14",
-    },
-    {
-      id: 3,
-      name: "Bin A1-3",
-      description: "Electronics - Accessories",
-      shelfId: 1,
-      shelfName: "Shelf A1",
-      zoneId: 1,
-      zoneName: "Zone A",
-      warehouseId: 1,
-      warehouseName: "Main Distribution Center",
-      type: "small",
-      capacity: 25,
-      utilized: 10,
-      itemCount: 25,
-      status: "active",
-      lastUpdated: "2023-06-13",
-    },
-    {
-      id: 4,
-      name: "Bin A2-1",
-      description: "Electronics - Laptops",
-      shelfId: 2,
-      shelfName: "Shelf A2",
-      zoneId: 1,
-      zoneName: "Zone A",
-      warehouseId: 1,
-      warehouseName: "Main Distribution Center",
-      type: "large",
-      capacity: 75,
-      utilized: 60,
-      itemCount: 15,
-      status: "active",
-      lastUpdated: "2023-06-12",
-    },
-    {
-      id: 5,
-      name: "Bin B1-1",
-      description: "Clothing - T-shirts",
-      shelfId: 3,
-      shelfName: "Shelf B1",
-      zoneId: 2,
-      zoneName: "Zone B",
-      warehouseId: 1,
-      warehouseName: "Main Distribution Center",
-      type: "standard",
-      capacity: 50,
-      utilized: 45,
-      itemCount: 30,
-      status: "active",
-      lastUpdated: "2023-06-11",
-    },
-    {
-      id: 6,
-      name: "Bin C1-1",
-      description: "Under maintenance",
-      shelfId: 5,
-      shelfName: "Shelf C1",
-      zoneId: 3,
-      zoneName: "Zone C",
-      warehouseId: 2,
-      warehouseName: "West Coast Facility",
-      type: "standard",
-      capacity: 50,
-      utilized: 0,
-      itemCount: 0,
-      status: "maintenance",
-      lastUpdated: "2023-06-10",
-    },
-  ];
-
-  // Sample data for shelves
-  const shelvesData = [
-    {
-      id: 1,
-      name: "Shelf A1",
-      zoneId: 1,
-      zoneName: "Zone A",
-      warehouseId: 1,
-      warehouseName: "Main Distribution Center",
-    },
-    {
-      id: 2,
-      name: "Shelf A2",
-      zoneId: 1,
-      zoneName: "Zone A",
-      warehouseId: 1,
-      warehouseName: "Main Distribution Center",
-    },
-    {
-      id: 3,
-      name: "Shelf B1",
-      zoneId: 2,
-      zoneName: "Zone B",
-      warehouseId: 1,
-      warehouseName: "Main Distribution Center",
-    },
-    {
-      id: 4,
-      name: "Shelf B2",
-      zoneId: 2,
-      zoneName: "Zone B",
-      warehouseId: 1,
-      warehouseName: "Main Distribution Center",
-    },
-    {
-      id: 5,
-      name: "Shelf C1",
-      zoneId: 3,
-      zoneName: "Zone C",
-      warehouseId: 2,
-      warehouseName: "West Coast Facility",
-    },
-  ];
-
-  // Load shelves on component mount
+  // Fetch shelves and bins data from backend
   useEffect(() => {
-    // In a real app, this would be an API call
-    setShelves(shelvesData);
-    
-    // If shelfId is provided in URL, set it as selected
-    if (shelfIdFromUrl) {
-      setSelectedShelf(shelfIdFromUrl);
-      setBinForm(prev => ({
-        ...prev,
-        shelfId: shelfIdFromUrl.toString()
-      }));
-    }
-  }, [shelfIdFromUrl]);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  // Filter data based on search input and selected shelf
-  const filteredData = binsData.filter((item) => {
-    // Filter by shelf if one is selected
-    if (selectedShelf && item.shelfId !== selectedShelf) {
-      return false;
-    }
+        const zonesResponse = await zoneAPI.getZones();
+        const zonesData =
+          zonesResponse && zonesResponse.data ? zonesResponse.data : [];
+        setZones(Array.isArray(zonesData) ? zonesData : []);
 
-    // Then filter by search text
+        // Fetch shelves data
+        const shelvesResponse = await shelfAPI.getShelves();
+        setShelves(
+          Array.isArray(shelvesResponse.data) ? shelvesResponse.data : []
+        );
+
+        // Fetch bins data based on selected shelf or all bins
+        let binsResponse;
+        if (selectedShelf) {
+          binsResponse = await binAPI.getBins(selectedShelf);
+        } else {
+          binsResponse = await binAPI.getBins();
+        }
+
+        setBins(Array.isArray(binsResponse.data) ? binsResponse.data : []);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError("Failed to load data. Please try again.");
+        toast.error("Failed to load data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [selectedShelf]);
+
+  // Filtered bins based on search text
+  const filteredBins = bins.filter((bin) => {
+    // Filter by search text
     const searchText = filterText.toLowerCase();
     return (
-      (item.name && item.name.toLowerCase().includes(searchText)) ||
-      (item.description && item.description.toLowerCase().includes(searchText)) ||
-      (item.type && item.type.toLowerCase().includes(searchText)) ||
-      (item.shelfName && item.shelfName.toLowerCase().includes(searchText))
+      (bin.name && bin.name.toLowerCase().includes(searchText)) ||
+      (bin.description && bin.description.toLowerCase().includes(searchText)) ||
+      (bin.type && bin.type.toLowerCase().includes(searchText)) ||
+      (bin.shelfName && bin.shelfName.toLowerCase().includes(searchText))
     );
   });
+
+  // Calculate statistics
+  const totalBins = filteredBins.length;
+  const activeBins = filteredBins.filter((bin) => bin.isActive === true).length;
+  const totalCapacity = filteredBins.reduce(
+    (sum, bin) => sum + (parseInt(bin.utilization.capacityValue) || 0),
+    0
+  );
+  const totalUtilized = filteredBins.reduce(
+    (sum, bin) => sum + (parseInt(bin.utilization.utilizationPercentage) || 0),
+    0
+  );
+  const utilizationPercentage =
+    totalCapacity > 0 ? Math.round((totalUtilized / totalCapacity) * 100) : 0;
+  const totalItems = filteredBins.reduce(
+    (sum, bin) => sum + (bin.inventoryCount || 0),
+    0
+  );
 
   // Handle form input changes
   const handleInputChange = (e) => {
@@ -220,20 +119,48 @@ const BinManagement = () => {
   };
 
   // Handle form submission for new bin
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // In a real app, this would be an API call to create a new bin
-    console.log("Creating new bin:", binForm);
-    setShowAddModal(false);
-    // Reset form but keep selected shelf
-    setBinForm({
-      name: "",
-      description: "",
-      shelfId: selectedShelf ? selectedShelf.toString() : "",
-      type: "standard",
-      capacity: 50,
-      status: "active",
-    });
+    try {
+      setLoading(true);
+      const shelfId = binForm.shelfId;
+
+      // Create payload for API
+      const binData = {
+        name: binForm.name,
+        description: binForm.description,
+        type: binForm.type,
+        capacity: parseInt(binForm.capacity),
+        status: binForm.status,
+      };
+
+      // API call to create bin
+      await binAPI.createBin(shelfId, binData);
+
+      // Refresh bins data
+      const binsResponse = selectedShelf
+        ? await binAPI.getBins(selectedShelf)
+        : await binAPI.getBins();
+
+      setBins(Array.isArray(binsResponse.data) ? binsResponse.data : []);
+      toast.success("Bin created successfully");
+
+      // Reset form and close modal
+      setBinForm({
+        name: "",
+        description: "",
+        shelfId: selectedShelf ? selectedShelf.toString() : "",
+        type: "standard",
+        capacity: 50,
+        status: "active",
+      });
+      setShowAddModal(false);
+    } catch (err) {
+      console.error("Error creating bin:", err);
+      toast.error("Failed to create bin");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle edit bin
@@ -251,18 +178,63 @@ const BinManagement = () => {
   };
 
   // Handle update bin
-  const handleUpdate = (e) => {
+  const handleUpdate = async (e) => {
     e.preventDefault();
-    // In a real app, this would be an API call to update the bin
-    console.log("Updating bin:", selectedBin.id, binForm);
-    setShowEditModal(false);
+    try {
+      setLoading(true);
+
+      // Create payload for API
+      const binData = {
+        name: binForm.name,
+        description: binForm.description,
+        type: binForm.type,
+        capacity: parseInt(binForm.capacity),
+        status: binForm.status,
+      };
+
+      // API call to update bin
+      await binAPI.updateBin(selectedBin._id, binData);
+
+      // Refresh bins data
+      const binsResponse = selectedShelf
+        ? await binAPI.getBins(selectedShelf)
+        : await binAPI.getBins();
+
+      setBins(Array.isArray(binsResponse.data) ? binsResponse.data : []);
+      toast.success("Bin updated successfully");
+
+      // Close modal
+      setShowEditModal(false);
+    } catch (err) {
+      console.error("Error updating bin:", err);
+      toast.error("Failed to update bin");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle delete bin
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this bin?")) {
-      // In a real app, this would be an API call to delete the bin
-      console.log("Deleting bin:", id);
+      try {
+        setLoading(true);
+
+        // API call to delete bin
+        await binAPI.deleteBin(id);
+
+        // Refresh bins data
+        const binsResponse = selectedShelf
+          ? await binAPI.getBins(selectedShelf)
+          : await binAPI.getBins();
+
+        setBins(Array.isArray(binsResponse.data) ? binsResponse.data : []);
+        toast.success("Bin deleted successfully");
+      } catch (err) {
+        console.error("Error deleting bin:", err);
+        toast.error("Failed to delete bin");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -271,82 +243,93 @@ const BinManagement = () => {
     const shelfId = e.target.value ? parseInt(e.target.value) : null;
     setSelectedShelf(shelfId);
   };
-
+  const findShelfById = (id) => {
+    if (!id) return null;
+    return shelves.find((shelf) => shelf._id === id)?.name;
+  };
+  const findZoneById = (id) => {
+    if (!id) return null;
+    return zones.find((zone) => zone._id === id)?.name;
+  };
   // Table columns
   const columns = [
     { name: "Bin Name", selector: (row) => row.name, sortable: true },
-    { name: "Shelf", selector: (row) => row.shelfName, sortable: true },
+    {
+      name: "Shelf",
+      selector: (row) => findShelfById(row.shelfId),
+      sortable: true,
+    },
     { name: "Type", selector: (row) => row.type, sortable: true },
     {
+      name: "Status",
+      selector: (row) => row.isActive,
+      sortable: true,
+      cell: (row) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs ${
+            row.isActive === true
+              ? "bg-green-100 text-green-800"
+              : "bg-yellow-100 text-yellow-800"
+          }`}
+        >
+          {row.isActive === true ? "Active" : "Inactive"}
+        </span>
+      ),
+    },
+    {
       name: "Capacity",
-      selector: (row) => `${row.utilized}/${row.capacity}`,
+      selector: (row) => row.utilization.capacityValue,
+      sortable: true,
+    },
+    {
+      name: "Utilization",
+      selector: (row) => row.utilization.utilizationPercentage,
       sortable: true,
       cell: (row) => {
-        const utilizationPercent = Math.round((row.utilized / row.capacity) * 100);
+        const utilizationPercent = row.utilization.utilizationPercentage;
         return (
           <div className="w-full">
-            <div className="flex justify-between text-xs mb-1">
-              <span>{row.utilized}/{row.capacity}</span>
-              <span>{utilizationPercent}%</span>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium">{utilizationPercent}%</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2.5">
-              <div 
-                className={`h-2.5 rounded-full ${
-                  utilizationPercent > 90 ? 'bg-red-500' : 
-                  utilizationPercent > 70 ? 'bg-yellow-500' : 'bg-green-500'
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className={`h-2 rounded-full ${
+                  utilizationPercent > 90
+                    ? "bg-red-500"
+                    : utilizationPercent > 70
+                    ? "bg-yellow-500"
+                    : "bg-green-500"
                 }`}
                 style={{ width: `${utilizationPercent}%` }}
               ></div>
             </div>
           </div>
         );
-      }
+      },
     },
     {
-      name: "Status",
-      selector: (row) => row.status,
-      sortable: true,
-      cell: (row) => (
-        <span
-          className={`px-2 py-1 rounded-full text-xs ${
-            row.status === "active"
-              ? "bg-green-100 text-green-800"
-              : "bg-yellow-100 text-yellow-800"
-          }`}
-        >
-          {row.status}
-        </span>
-      ),
-    },
-    {
-      name: "Items",
-      selector: (row) => row.itemCount,
+      name: "Inventory",
+      selector: (row) => row.inventoryCount,
       sortable: true,
     },
     {
       name: "Actions",
       cell: (row) => (
-        <div className="flex space-x-2">
+        <div className="flex space-x-1">
           <button
             onClick={() => handleEdit(row)}
             className="p-1 text-blue-600 hover:text-blue-800"
-            title="Edit Bin"
+            title="Edit"
           >
             ✏️
           </button>
           <button
             onClick={() => handleDelete(row.id)}
             className="p-1 text-red-600 hover:text-red-800"
-            title="Delete Bin"
+            title="Delete"
           >
             🗑️
-          </button>
-          <button
-            onClick={() => window.location.href = `/warehouse/inventory?binId=${row.id}`}
-            className="p-1 text-green-600 hover:text-green-800"
-            title="View Inventory"
-          >
-            🔍
           </button>
         </div>
       ),
@@ -354,20 +337,20 @@ const BinManagement = () => {
   ];
 
   // Get selected shelf details
-  const selectedShelfDetails = shelves.find(s => s.id === selectedShelf);
+  const selectedShelfDetails = shelves.find((s) => s.id === selectedShelf);
 
   return (
     <div className="container-fluid mx-auto px-4 py-6">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800">
-          {selectedShelfDetails 
-            ? `Bins in ${selectedShelfDetails.name}` 
+          {selectedShelfDetails
+            ? `Bins in ${selectedShelfDetails.name}`
             : "Bin Management"}
         </h1>
         <p className="text-gray-600">
           {selectedShelfDetails
-            ? `Manage bins in ${selectedShelfDetails.name} at ${selectedShelfDetails.warehouseName}`
+            ? `Manage bins in ${selectedShelfDetails.name} at ${selectedShelfDetails.zoneName}`
             : "Manage bins across all warehouse shelves"}
         </p>
       </div>
@@ -398,7 +381,7 @@ const BinManagement = () => {
           />
         </div>
         <button
-          className="btn btn-primary"
+          className="btn btn-primary w-full md:w-auto"
           onClick={() => setShowAddModal(true)}
         >
           Add New Bin
@@ -406,14 +389,12 @@ const BinManagement = () => {
       </div>
 
       {/* Bin Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Bins</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {filteredData.length}
-              </p>
+              <p className="text-2xl font-bold text-gray-900">{totalBins}</p>
             </div>
             <div className="p-3 rounded-full bg-blue-100 text-blue-500">📦</div>
           </div>
@@ -423,9 +404,7 @@ const BinManagement = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Active Bins</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {filteredData.filter((b) => b.status === "active").length}
-              </p>
+              <p className="text-2xl font-bold text-gray-900">{activeBins}</p>
             </div>
             <div className="p-3 rounded-full bg-green-100 text-green-500">
               ✅
@@ -436,18 +415,25 @@ const BinManagement = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Avg. Utilization</p>
+              <p className="text-sm font-medium text-gray-600">
+                Total Capacity
+              </p>
               <p className="text-2xl font-bold text-gray-900">
-                {filteredData.length > 0 
-                  ? Math.round(
-                      (filteredData.reduce(
-                        (sum, bin) => sum + (bin.utilized / bin.capacity),
-                        0
-                      ) /
-                        filteredData.length) *
-                        100
-                    )
-                  : 0}%
+                {totalCapacity}
+              </p>
+            </div>
+            <div className="p-3 rounded-full bg-purple-100 text-purple-500">
+              📈
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Utilization</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {utilizationPercentage}%
               </p>
             </div>
             <div className="p-3 rounded-full bg-yellow-100 text-yellow-500">
@@ -459,18 +445,25 @@ const BinManagement = () => {
 
       {/* Data Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
+        {error && (
+          <div className="p-4 bg-red-100 text-red-700 border-l-4 border-red-500">
+            {error}
+          </div>
+        )}
         <DataTable
           columns={columns}
-          data={filteredData}
+          data={filteredBins}
           pagination
           responsive
           highlightOnHover
           striped
+          progressPending={loading}
+          progressComponent={<div className="p-4">Loading...</div>}
           subHeader
           subHeaderComponent={
             <div className="w-full text-right py-2">
               <span className="text-sm text-gray-600">
-                {filteredData.length} bins found
+                {filteredBins.length} bins found
               </span>
             </div>
           }
@@ -479,10 +472,18 @@ const BinManagement = () => {
 
       {/* Add Bin Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-            <div className="p-6">
-              <h2 className="text-xl font-bold mb-4">Add New Bin</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Add New Bin</h2>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={() => setShowAddModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[70vh]">
               <form onSubmit={handleSubmit}>
                 <div className="space-y-4">
                   <div>
@@ -502,8 +503,8 @@ const BinManagement = () => {
                     >
                       <option value="">Select Shelf</option>
                       {shelves.map((shelf) => (
-                        <option key={shelf.id} value={shelf.id}>
-                          {shelf.name} ({shelf.zoneName})
+                        <option key={shelf._id} value={shelf._id}>
+                          {shelf.name} ({findZoneById(shelf.zoneId)})
                         </option>
                       ))}
                     </select>
@@ -561,6 +562,7 @@ const BinManagement = () => {
                       <option value="standard">Standard</option>
                       <option value="small">Small</option>
                       <option value="large">Large</option>
+                      <option value="refrigerated">Refrigerated</option>
                       <option value="secure">Secure/Locked</option>
                     </select>
                   </div>
@@ -623,11 +625,19 @@ const BinManagement = () => {
       )}
 
       {/* Edit Bin Modal */}
-      {showEditModal && selectedBin && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-            <div className="p-6">
-              <h2 className="text-xl font-bold mb-4">Edit Bin</h2>
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Edit Bin</h2>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={() => setShowEditModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[70vh]">
               <form onSubmit={handleUpdate}>
                 <div className="space-y-4">
                   <div>
@@ -642,13 +652,13 @@ const BinManagement = () => {
                       name="shelfId"
                       className="form-input w-full"
                       value={binForm.shelfId}
-                      onChange={handleInputChange}
+                      onChange={handleShelfChange}
                       required
                     >
                       <option value="">Select Shelf</option>
                       {shelves.map((shelf) => (
-                        <option key={shelf.id} value={shelf.id}>
-                          {shelf.name} ({shelf.zoneName})
+                        <option key={shelf._id} value={shelf._id}>
+                          {shelf.name} ({findZoneById(shelf.zoneId)})
                         </option>
                       ))}
                     </select>
@@ -706,6 +716,7 @@ const BinManagement = () => {
                       <option value="standard">Standard</option>
                       <option value="small">Small</option>
                       <option value="large">Large</option>
+                      <option value="refrigerated">Refrigerated</option>
                       <option value="secure">Secure/Locked</option>
                     </select>
                   </div>

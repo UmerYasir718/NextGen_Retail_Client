@@ -2,8 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import DataTable from "react-data-table-component";
 import { toast } from "react-toastify";
-import { userAPI } from "../../utils/helpfunction";
+import userAPI from "../../utils/api/userAPI";
 import { formatDate } from "../../utils/helpfunction";
+import { FaSearch, FaPlus, FaSync, FaKey } from "react-icons/fa";
+import PasswordUpdateModal from "../../components/PasswordUpdateModal";
 
 const UserManagement = () => {
   const { user } = useSelector((state) => state.auth);
@@ -19,142 +21,89 @@ const UserManagement = () => {
   const [newUser, setNewUser] = useState({
     name: "",
     email: "",
+    password: "",
     role: "",
-    company: "",
     phone: "",
     status: "active",
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordUpdateModal, setShowPasswordUpdateModal] = useState(false);
+  const [selectedUserForPassword, setSelectedUserForPassword] = useState(null);
 
-  // Sample data for users
-  // const usersData = [
-  //   {
-  //     id: 1,
-  //     name: "John Doe",
-  //     email: "john.doe@example.com",
-  //     role: "super_admin",
-  //     company: "NextGen Retail Corp",
-  //     phone: "555-123-4567",
-  //     lastLogin: "2023-06-15 14:30:22",
-  //     status: "active",
-  //   },
-  //   {
-  //     id: 2,
-  //     name: "Jane Smith",
-  //     email: "jane.smith@example.com",
-  //     role: "company_admin",
-  //     company: "Fashion Forward Inc",
-  //     phone: "555-234-5678",
-  //     lastLogin: "2023-06-15 13:45:10",
-  //     status: "active",
-  //   },
-  //   {
-  //     id: 3,
-  //     name: "Bob Johnson",
-  //     email: "bob.johnson@example.com",
-  //     role: "store_manager",
-  //     company: "Tech Gadgets Ltd",
-  //     phone: "555-345-6789",
-  //     lastLogin: "2023-06-15 12:20:05",
-  //     status: "active",
-  //   },
-  //   {
-  //     id: 4,
-  //     name: "Alice Brown",
-  //     email: "alice.brown@example.com",
-  //     role: "analyst",
-  //     company: "Home Essentials Co",
-  //     phone: "555-456-7890",
-  //     lastLogin: "2023-06-15 11:15:30",
-  //     status: "inactive",
-  //   },
-  //   {
-  //     id: 5,
-  //     name: "Charlie Wilson",
-  //     email: "charlie.wilson@example.com",
-  //     role: "auditor",
-  //     company: "Sports Unlimited",
-  //     phone: "555-567-8901",
-  //     lastLogin: "2023-06-15 10:05:45",
-  //     status: "active",
-  //   },
-  //   {
-  //     id: 6,
-  //     name: "Diana Miller",
-  //     email: "diana.miller@example.com",
-  //     role: "company_admin",
-  //     company: "NextGen Retail Corp",
-  //     phone: "555-678-9012",
-  //     lastLogin: "2023-06-14 16:30:20",
-  //     status: "active",
-  //   },
-  //   {
-  //     id: 7,
-  //     name: "Ethan Davis",
-  //     email: "ethan.davis@example.com",
-  //     role: "store_manager",
-  //     company: "Fashion Forward Inc",
-  //     phone: "555-789-0123",
-  //     lastLogin: "2023-06-14 15:25:18",
-  //     status: "active",
-  //   },
-  //   {
-  //     id: 8,
-  //     name: "Fiona Clark",
-  //     email: "fiona.clark@example.com",
-  //     role: "analyst",
-  //     company: "Tech Gadgets Ltd",
-  //     phone: "555-890-1234",
-  //     lastLogin: "2023-06-14 14:10:05",
-  //     status: "inactive",
-  //   },
-  //   {
-  //     id: 9,
-  //     name: "George White",
-  //     email: "george.white@example.com",
-  //     role: "auditor",
-  //     company: "Home Essentials Co",
-  //     phone: "555-901-2345",
-  //     lastLogin: "2023-06-14 13:05:30",
-  //     status: "active",
-  //   },
-  //   {
-  //     id: 10,
-  //     name: "Hannah Green",
-  //     email: "hannah.green@example.com",
-  //     role: "store_manager",
-  //     company: "Sports Unlimited",
-  //     phone: "555-012-3456",
-  //     lastLogin: "2023-06-14 12:00:15",
-  //     status: "active",
-  //   },
-  // ];
+  // Handle toggling user status (activate/deactivate)
+  const handleToggleStatus = async (user) => {
+    try {
+      setLoading(true);
+
+      // Prepare update data
+      const userData = {
+        isActive: !user.isActive,
+      };
+
+      // Call API to update user status
+      await userAPI.updateUser(user._id, userData);
+
+      // Success message and refresh data
+      toast.success(
+        `User ${userData.isActive ? "activated" : "deactivated"} successfully`
+      );
+      fetchInventoryData();
+    } catch (err) {
+      console.error("Error updating user status:", err);
+      toast.error(err.message || "Failed to update user status");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle resetting user password
+  const handleResetPassword = async (userId) => {
+    try {
+      setLoading(true);
+
+      // Call API to reset password
+      await userAPI.resetPassword(userId);
+
+      // Success message
+      toast.success("Password reset link sent to user's email");
+    } catch (err) {
+      console.error("Error resetting password:", err);
+      toast.error(err.message || "Failed to reset password");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle opening password update modal
+  const handleUpdatePassword = (user) => {
+    setSelectedUserForPassword(user);
+    setShowPasswordUpdateModal(true);
+  };
+
   useEffect(() => {
     fetchInventoryData();
   }, []);
+
   const fetchInventoryData = async () => {
     try {
       setLoading(true);
-      // const companyId = selectedCompany?.id || null;
-      // if (!companyId) {
-      //   setInventoryData([]);
-      //   return;
-      // }
+      const companyId = selectedCompany?._id || null;
 
-      const data = await userAPI.getUsers("6876bda9694900c60234bf5e");
-      console.log("object", data);
-      setuserData(Array.isArray(data?.data) ? data?.data : []);
-      console.log("DATA RESPONSE", data);
+      // Get users based on role
+      const response = await userAPI.getUsers(companyId);
+      setuserData(Array.isArray(response.data) ? response.data : []);
 
       setError(null);
     } catch (err) {
-      // console.error("Error fetching inventory data:", err);
-      setError("Failed to load inventory data. Please try again.");
-      toast.error("Failed to load inventory data");
+      console.error("Error fetching user data:", err);
+      setError("Failed to load user data. Please try again.");
+      toast.error("Failed to load user data");
       setuserData([]);
     } finally {
       setLoading(false);
     }
   };
+
   // Filter data based on search input
   const filteredData = usersData.filter((item) => {
     const searchText = filterText.toLowerCase();
@@ -182,6 +131,21 @@ const UserManagement = () => {
     auditor: "Auditor",
   };
 
+  // Calculate user statistics
+  const totalUsers = displayData.length;
+  const activeUsers = displayData.filter(
+    (user) => user.isActive === true
+  ).length;
+  const inactiveUsers = displayData.filter(
+    (user) => user.isActive !== true
+  ).length;
+
+  // Get role counts
+  const roleCounts = displayData.reduce((acc, user) => {
+    acc[user.role] = (acc[user.role] || 0) + 1;
+    return acc;
+  }, {});
+
   // Table columns
   const columns = [
     { name: "Name", selector: (row) => row.name, sortable: true },
@@ -208,7 +172,11 @@ const UserManagement = () => {
         </span>
       ),
     },
-    { name: "Company", selector: (row) => row.companyId.name, sortable: true },
+    {
+      name: "Company",
+      selector: (row) => row.companyId?.name || "N/A",
+      sortable: true,
+    },
     { name: "Phone", selector: (row) => row.phone, sortable: true },
     {
       name: "Last Login",
@@ -227,7 +195,7 @@ const UserManagement = () => {
               : "bg-red-100 text-red-800"
           }`}
         >
-          {row.isActive === "active" ? "Active" : "Inactive"}
+          {row.isActive === true ? "Active" : "Inactive"}
         </span>
       ),
     },
@@ -244,8 +212,18 @@ const UserManagement = () => {
           >
             Edit
           </button>
-          <button className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600">
-            {row.status === "active" ? "Deactivate" : "Activate"}
+          <button
+            className="px-2 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600"
+            onClick={() => handleUpdatePassword(row)}
+            title="Update Password"
+          >
+            <FaKey className="inline" />
+          </button>
+          <button
+            className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+            onClick={() => handleToggleStatus(row)}
+          >
+            {row.isActive === true ? "Deactivate" : "Activate"}
           </button>
         </div>
       ),
@@ -269,52 +247,106 @@ const UserManagement = () => {
   };
 
   // Handle form submission for adding a new user
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
-    // In a real application, this would send data to the backend
-    // For now, we'll just close the modal
-    setShowAddModal(false);
-    setNewUser({
-      name: "",
-      email: "",
-      role: "",
-      company: "",
-      phone: "",
-      status: "active",
-    });
+    try {
+      setLoading(true);
+
+      // Prepare user data for API
+      const userData = {
+        name: newUser.name,
+        email: newUser.email,
+        password: newUser.password,
+        role: newUser.role,
+        companyId:
+          user.role === "super_admin"
+            ? companies.find((c) => c.name === newUser.company)?._id
+            : user.companyId,
+        phone: newUser.phone,
+        isActive: newUser.status === "active",
+      };
+
+      // Call API to create user
+      await userAPI.createUser(userData);
+      // Success message and refresh data
+      toast.success("User created successfully");
+      fetchInventoryData();
+
+      // Reset form and close modal
+      setShowAddModal(false);
+      setNewUser({
+        name: "",
+        email: "",
+        password: "",
+        role: "",
+        company: "",
+        phone: "",
+        status: "active",
+      });
+    } catch (err) {
+      console.error("Error creating user:", err);
+      toast.error(err.message || "Failed to create user");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle form submission for editing a user
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    // In a real application, this would send data to the backend
-    // For now, we'll just close the modal
-    setShowEditModal(false);
-    setSelectedUser(null);
+    try {
+      setLoading(true);
+
+      // Prepare user data for API
+      const userData = {
+        name: selectedUser.name,
+        email: selectedUser.email,
+        role: selectedUser.role,
+        companyId:
+          user.role === "super_admin"
+            ? companies.find((c) => c.name === selectedUser.company)?._id
+            : user.companyId,
+        phone: selectedUser.phone,
+        isActive: selectedUser.status === "active",
+      };
+
+      // Call API to update user
+      await userAPI.updateUser(selectedUser._id, userData);
+
+      // Success message and refresh data
+      toast.success("User updated successfully");
+      fetchInventoryData();
+
+      // Close modal and reset selected user
+      setShowEditModal(false);
+      setSelectedUser(null);
+    } catch (err) {
+      console.error("Error updating user:", err);
+      toast.error(err.message || "Failed to update user");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Calculate user statistics
-  const totalUsers = displayData.length;
-  const activeUsers = displayData.filter(
-    (user) => user.isActive === true
-  ).length;
-  const inactiveUsers = displayData.filter(
-    (user) => user.isActive !== true
-  ).length;
-
-  // Get role counts
-  const roleCounts = displayData.reduce((acc, user) => {
-    acc[user.role] = (acc[user.role] || 0) + 1;
-    return acc;
-  }, {});
-
   return (
-    <div className="container-fluid mx-auto px-4 py-6">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">User Management</h1>
-        <p className="text-gray-600">Manage users, roles, and permissions</p>
-      </div>
+    <div className="container-fluid mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-6">User Management</h1>
+
+      {/* Error display */}
+      {error && (
+        <div
+          className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4"
+          role="alert"
+        >
+          <p>{error}</p>
+          <button
+            className="flex items-center mt-2 text-sm font-medium text-red-700 hover:text-red-900"
+            onClick={fetchInventoryData}
+          >
+            <FaSync className="mr-1" /> Retry
+          </button>
+        </div>
+      )}
 
       {/* Company Selection Notice for Super Admin */}
       {user?.role === "super_admin" && (
@@ -332,22 +364,25 @@ const UserManagement = () => {
         </div>
       )}
 
-      {/* Search and Add Button */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6">
-        <div className="w-full md:w-1/3 mb-4 md:mb-0">
+      {/* Search and Add User */}
+      <div className="flex justify-between mb-6">
+        <div className="relative">
           <input
             type="text"
             placeholder="Search users..."
-            className="form-input w-full"
+            className="form-input pl-10 pr-4 py-2"
             value={filterText}
             onChange={(e) => setFilterText(e.target.value)}
           />
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <FaSearch className="h-5 w-5 text-gray-400" />
+          </div>
         </div>
         <button
-          className="btn btn-primary"
+          className="btn btn-primary flex items-center"
           onClick={() => setShowAddModal(true)}
         >
-          Add New User
+          <FaPlus className="mr-2" /> Add User
         </button>
       </div>
 
@@ -390,42 +425,27 @@ const UserManagement = () => {
         </div>
       </div>
 
-      {/* Role Distribution */}
-      <div className="bg-white rounded-lg shadow p-6 mb-8">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">
-          Role Distribution
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {Object.entries(roleCounts).map(([role, count]) => (
-            <div key={role} className="bg-gray-50 rounded-lg p-4 text-center">
-              <p className="font-medium text-gray-800">
-                {roleDisplayMap[role] || role}
-              </p>
-              <p className="text-2xl font-bold text-gray-900">{count}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Data Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <DataTable
-          columns={columns}
-          data={displayData}
-          pagination
-          responsive
-          highlightOnHover
-          striped
-          subHeader
-          subHeaderComponent={
-            <div className="w-full text-right py-2">
-              <span className="text-sm text-gray-600">
-                {displayData.length} users found
-              </span>
-            </div>
-          }
-        />
-      </div>
+      {/* User Table */}
+      <DataTable
+        columns={columns}
+        data={displayData}
+        pagination
+        persistTableHead
+        highlightOnHover
+        striped
+        responsive
+        progressPending={loading}
+        progressComponent={
+          <div className="flex justify-center items-center p-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
+        }
+        noDataComponent={
+          <div className="p-4 text-center text-gray-500">
+            No users found. Try adjusting your search or filters.
+          </div>
+        }
+      />
 
       {/* Add New User Modal */}
       {showAddModal && (
@@ -482,6 +502,37 @@ const UserManagement = () => {
                 <div>
                   <label
                     className="block text-gray-700 text-sm font-bold mb-2"
+                    htmlFor="password"
+                  >
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      id="password"
+                      name="password"
+                      className="form-input pr-10"
+                      value={newUser.password}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <span className="text-gray-500">👁️</span>
+                      ) : (
+                        <span className="text-gray-500">👁️‍🗨️</span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label
+                    className="block text-gray-700 text-sm font-bold mb-2"
                     htmlFor="role"
                   >
                     Role
@@ -496,40 +547,11 @@ const UserManagement = () => {
                   >
                     <option value="">Select Role</option>
                     {user?.role === "super_admin" && (
-                      <option value="super_admin">Super Admin</option>
+                      <option value="company_admin">Company Admin</option>
                     )}
-                    <option value="company_admin">Company Admin</option>
                     <option value="store_manager">Store Manager</option>
                     <option value="analyst">Analyst</option>
                     <option value="auditor">Auditor</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label
-                    className="block text-gray-700 text-sm font-bold mb-2"
-                    htmlFor="company"
-                  >
-                    Company
-                  </label>
-                  <select
-                    id="company"
-                    name="company"
-                    className="form-input"
-                    value={newUser.company}
-                    onChange={handleInputChange}
-                    required
-                  >
-                    <option value="">Select Company</option>
-                    {user?.role === "super_admin" ? (
-                      companies.map((company) => (
-                        <option key={company.id} value={company.name}>
-                          {company.name}
-                        </option>
-                      ))
-                    ) : (
-                      <option value={user?.company}>{user?.company}</option>
-                    )}
                   </select>
                 </div>
 
@@ -569,12 +591,6 @@ const UserManagement = () => {
                     <option value="inactive">Inactive</option>
                   </select>
                 </div>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2">
-                  Password will be auto-generated and sent to the user's email
-                </label>
               </div>
 
               <div className="flex justify-end space-x-4">
@@ -694,7 +710,7 @@ const UserManagement = () => {
                   >
                     {user?.role === "super_admin" ? (
                       companies.map((company) => (
-                        <option key={company.id} value={company.name}>
+                        <option key={company._id} value={company.name}>
                           {company.name}
                         </option>
                       ))
@@ -746,6 +762,7 @@ const UserManagement = () => {
                 <button
                   type="button"
                   className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  onClick={() => handleResetPassword(selectedUser._id)}
                 >
                   Reset Password
                 </button>
@@ -773,6 +790,17 @@ const UserManagement = () => {
           </div>
         </div>
       )}
+
+      {/* Password Update Modal */}
+      <PasswordUpdateModal
+        isOpen={showPasswordUpdateModal}
+        onClose={() => {
+          setShowPasswordUpdateModal(false);
+          setSelectedUserForPassword(null);
+        }}
+        userId={selectedUserForPassword?._id}
+        userName={selectedUserForPassword?.name}
+      />
     </div>
   );
 };

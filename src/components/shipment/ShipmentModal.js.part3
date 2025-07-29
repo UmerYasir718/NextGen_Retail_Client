@@ -1,0 +1,234 @@
+                  {/* Items */}
+                  <div className="mb-6">
+                    <h4 className="text-md font-medium text-gray-900 mb-3">
+                      Items
+                    </h4>
+                    <div className="bg-white rounded-lg shadow overflow-hidden p-4">
+                      {formData.items.length === 0 ? (
+                        <p className="text-sm text-gray-500 mb-4">No items added yet.</p>
+                      ) : (
+                        <div className="mb-4 overflow-x-auto">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Item
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Quantity
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Price
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Total
+                                </th>
+                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Actions
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {formData.items.map((item, index) => (
+                                <tr key={index}>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <select
+                                      value={item.itemId}
+                                      onChange={(e) => handleItemChange(index, "itemId", e.target.value)}
+                                      disabled={mode === "view" || loadingInventory}
+                                      className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                    >
+                                      <option value="">Select Item</option>
+                                      {inventoryOptions.map((invItem) => (
+                                        <option key={invItem.id} value={invItem.id}>
+                                          {invItem.name} ({invItem.sku})
+                                        </option>
+                                      ))}
+                                    </select>
+                                    {errors[`items[${index}].itemId`] && (
+                                      <p className="mt-1 text-sm text-red-600">
+                                        {errors[`items[${index}].itemId`]}
+                                      </p>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      value={item.quantity}
+                                      onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 0)}
+                                      disabled={mode === "view"}
+                                      className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                    />
+                                    {errors[`items[${index}].quantity`] && (
+                                      <p className="mt-1 text-sm text-red-600">
+                                        {errors[`items[${index}].quantity`]}
+                                      </p>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={item.price}
+                                      onChange={(e) => handleItemChange(index, "price", parseFloat(e.target.value) || 0)}
+                                      disabled={mode === "view"}
+                                      className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                    />
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    ${(item.price * item.quantity).toFixed(2)}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    {mode !== "view" && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveItem(index)}
+                                        className="text-red-600 hover:text-red-900"
+                                      >
+                                        Remove
+                                      </button>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                            <tfoot>
+                              <tr>
+                                <td colSpan="3" className="px-6 py-4 text-right font-medium">
+                                  Total Value:
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap font-medium">
+                                  ${formData.totalValue.toFixed(2)}
+                                </td>
+                                <td></td>
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+                      )}
+                      {mode !== "view" && (
+                        <button
+                          type="button"
+                          onClick={handleAddItem}
+                          className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                          Add Item
+                        </button>
+                      )}
+                      {errors.items && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.items}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Documents */}
+                  <div className="mb-6">
+                    <h4 className="text-md font-medium text-gray-900 mb-3">
+                      Documents
+                    </h4>
+                    <div className="bg-white rounded-lg shadow overflow-hidden p-4">
+                      {formData.documents.length === 0 ? (
+                        <p className="text-sm text-gray-500 mb-4">No documents added yet.</p>
+                      ) : (
+                        <div className="mb-4">
+                          {formData.documents.map((doc, index) => (
+                            <div key={index} className="flex items-center mb-2 p-2 border rounded">
+                              <div className="flex-grow">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <select
+                                    value={doc.type}
+                                    onChange={(e) => handleDocumentChange(index, "type", e.target.value)}
+                                    disabled={mode === "view"}
+                                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                  >
+                                    {documentTypeOptions.map((option) => (
+                                      <option key={option} value={option}>
+                                        {option}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <input
+                                    type="text"
+                                    placeholder="File Name"
+                                    value={doc.fileName}
+                                    onChange={(e) => handleDocumentChange(index, "fileName", e.target.value)}
+                                    disabled={mode === "view"}
+                                    className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                  />
+                                </div>
+                                <input
+                                  type="text"
+                                  placeholder="Document URL"
+                                  value={doc.url}
+                                  onChange={(e) => handleDocumentChange(index, "url", e.target.value)}
+                                  disabled={mode === "view"}
+                                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md mt-2"
+                                />
+                              </div>
+                              {mode !== "view" && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveDocument(index)}
+                                  className="ml-2 text-red-600 hover:text-red-900"
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {mode !== "view" && (
+                        <button
+                          type="button"
+                          onClick={handleAddDocument}
+                          className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                          Add Document
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Form Actions */}
+                  <div className="mt-8 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="mr-3 inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || mode === "view"}
+                      className={`inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white ${
+                        isSubmitting || mode === "view"
+                          ? "bg-indigo-400"
+                          : "bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      }`}
+                    >
+                      {isSubmitting
+                        ? "Saving..."
+                        : mode === "add"
+                        ? "Create Shipment"
+                        : mode === "edit"
+                        ? "Update Shipment"
+                        : "Close"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ShipmentModal;

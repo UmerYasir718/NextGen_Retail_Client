@@ -1,0 +1,130 @@
+  // Handle document upload
+  const handleAddDocument = () => {
+    const newDocument = {
+      type: "Invoice",
+      url: "",
+      fileName: "",
+    };
+
+    setFormData({
+      ...formData,
+      documents: [...formData.documents, newDocument],
+    });
+  };
+
+  // Handle document removal
+  const handleRemoveDocument = (index) => {
+    const updatedDocuments = [...formData.documents];
+    updatedDocuments.splice(index, 1);
+
+    setFormData({
+      ...formData,
+      documents: updatedDocuments,
+    });
+  };
+
+  // Handle document field changes
+  const handleDocumentChange = (index, field, value) => {
+    const updatedDocuments = [...formData.documents];
+    updatedDocuments[index][field] = value;
+
+    setFormData({
+      ...formData,
+      documents: updatedDocuments,
+    });
+  };
+
+  // Validate form
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Required fields from schema
+    if (!formData.shipmentNumber) newErrors.shipmentNumber = "Shipment number is required";
+    if (!formData.type) newErrors.type = "Shipment type is required";
+    if (!formData.expectedDate) newErrors.expectedDate = "Expected date is required";
+    
+    // Source validation
+    if (!formData.source.name) newErrors["source.name"] = "Source name is required";
+    
+    // Destination validation
+    if (!formData.destination.name) newErrors["destination.name"] = "Destination name is required";
+    
+    // Items validation
+    if (formData.items.length === 0) {
+      newErrors.items = "At least one item is required";
+    } else {
+      formData.items.forEach((item, index) => {
+        if (!item.itemId) {
+          newErrors[`items[${index}].itemId`] = "Item selection is required";
+        }
+        if (item.quantity <= 0) {
+          newErrors[`items[${index}].quantity`] = "Quantity must be greater than 0";
+        }
+      });
+    }
+
+    // Warehouse validation
+    if (!formData.warehouseId) newErrors.warehouseId = "Warehouse is required";
+    
+    // Company validation
+    if (!formData.companyId) newErrors.companyId = "Company is required";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (mode === "view") {
+      onClose();
+      return;
+    }
+
+    const isValid = validateForm();
+
+    if (isValid) {
+      setIsSubmitting(true);
+
+      try {
+        // Format dates for API
+        const formattedData = {
+          ...formData,
+          expectedDate: formData.expectedDate ? new Date(formData.expectedDate).toISOString() : null,
+          actualDate: formData.actualDate ? new Date(formData.actualDate).toISOString() : null,
+        };
+
+        // Call API based on mode
+        let response;
+        if (mode === "add") {
+          response = await shipmentAPI.createShipment(formattedData);
+        } else if (mode === "edit") {
+          response = await shipmentAPI.updateShipment(initialData.id, formattedData);
+        }
+
+        // Show success message
+        toast.success(`Shipment ${mode === "add" ? "created" : "updated"} successfully!`);
+        
+        // Call onSubmit callback with response data
+        if (onSubmit) {
+          onSubmit(response);
+        }
+        
+        onClose();
+      } catch (error) {
+        console.error(`Error ${mode === "add" ? "creating" : "updating"} shipment:`, error);
+        toast.error(`Failed to ${mode === "add" ? "create" : "update"} shipment. ${error.message || ""}`);
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      toast.error("Please fix the errors in the form");
+    }
+  };
+
+  // Modal title based on mode
+  const getModalTitle = () => {
+    const action = mode === "add" ? "Add" : mode === "edit" ? "Edit" : "View";
+    return `${action} Shipment`;
+  };

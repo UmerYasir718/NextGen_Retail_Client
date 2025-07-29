@@ -20,11 +20,19 @@ import UserManagement from "./pages/management/UserManagement";
 import CompanyManagement from "./pages/management/CompanyManagement";
 import SystemManagement from "./pages/management/SystemManagement";
 import WarehousesManagement from "./pages/management/WarehousesManagement";
-import ForecastingManagement from "./pages/forecasting/ForecastingManagement";
+import ZoneManagement from "./pages/warehouse/ZoneManagement";
+import ShelfManagement from "./pages/warehouse/ShelfManagement";
+import BinManagement from "./pages/warehouse/BinManagement";
+import ForecastingManagement from "./pages/management/ForecastingManagement";
 import ForecastingDashboard from "./pages/forecasting/ForecastingDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import ShipmentManagement from "./pages/shipment/ShipmentManagement";
+import ShipmentDemo from "./pages/ShipmentDemo";
+import AuditLogs from "./pages/management/AuditLogs";
+import UHFManagement from "./pages/management/UHFManagement";
 import NotFound from "./pages/NotFound";
+import PaymentSuccess from "./pages/payments/PaymentSuccess";
+import PaymentCancel from "./pages/payments/PaymentCancel";
 
 // Protected Route Component
 const ProtectedRoute = ({ element, allowedRoles }) => {
@@ -49,7 +57,7 @@ function App() {
   useEffect(() => {
     const storedToken = localStorage.getItem("accessToken");
     const storedUser = localStorage.getItem("user");
-    
+
     if (storedToken && storedUser && !isAuthenticated) {
       try {
         const user = JSON.parse(storedUser);
@@ -147,7 +155,7 @@ function App() {
           }
         />
         <Route
-          path="/plan-view"
+          path="/plans"
           element={
             <ProtectedRoute
               element={<PlanView />}
@@ -187,10 +195,55 @@ function App() {
           }
         />
         <Route
+          path="/audit-logs"
+          element={
+            <ProtectedRoute
+              element={<AuditLogs />}
+              allowedRoles={["super_admin", "company_admin", "auditor"]}
+            />
+          }
+        />
+        <Route
+          path="/uhf-management"
+          element={
+            <ProtectedRoute
+              element={<UHFManagement />}
+              allowedRoles={["super_admin", "company_admin", "store_manager"]}
+            />
+          }
+        />
+        <Route
           path="/warehouse-management"
           element={
             <ProtectedRoute
               element={<WarehousesManagement />}
+              allowedRoles={["super_admin", "company_admin", "store_manager"]}
+            />
+          }
+        />
+        <Route
+          path="/zone-management"
+          element={
+            <ProtectedRoute
+              element={<ZoneManagement />}
+              allowedRoles={["super_admin", "company_admin", "store_manager"]}
+            />
+          }
+        />
+        <Route
+          path="/shelf-management"
+          element={
+            <ProtectedRoute
+              element={<ShelfManagement />}
+              allowedRoles={["super_admin", "company_admin", "store_manager"]}
+            />
+          }
+        />
+        <Route
+          path="/bin-management"
+          element={
+            <ProtectedRoute
+              element={<BinManagement />}
               allowedRoles={["super_admin", "company_admin", "store_manager"]}
             />
           }
@@ -226,6 +279,19 @@ function App() {
             />
           }
         />
+        <Route
+          path="/shipment-demo"
+          element={
+            <ProtectedRoute
+              element={<ShipmentDemo />}
+              allowedRoles={["super_admin", "company_admin", "store_manager"]}
+            />
+          }
+        />
+
+        {/* Public payment result pages */}
+        <Route path="/payment/success" element={<PaymentSuccess />} />
+        <Route path="/payment/cancel" element={<PaymentCancel />} />
 
         {/* 404 Not Found */}
         <Route path="*" element={<NotFound />} />

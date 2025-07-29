@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import DataTable from "react-data-table-component";
-import { inventoryAPI } from "../../utils/helpfunction";
+import { inventoryAPI, exportToCSV } from "../../utils/helpfunction";
 import { toast } from "react-toastify";
 import { formatDate } from "../../utils/helpfunction";
 
@@ -9,12 +9,12 @@ const PendingSaleInventory = () => {
   const { user } = useSelector((state) => state.auth);
   const { selectedCompany } = useSelector((state) => state.company);
   const [pendingSaleData, setPendingSaleData] = useState([]);
-
   const [filterText, setFilterText] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [batchProcessing, setBatchProcessing] = useState(false);
 
   // Sample data for pending sale inventory
   // const pendingSaleData = [
@@ -120,6 +120,90 @@ const PendingSaleInventory = () => {
   useEffect(() => {
     fetchInventoryData();
   }, []);
+
+  // Handle CSV export
+  const handleExportCSV = () => {
+    try {
+      // Prepare data for export (remove complex objects)
+      const exportData = filteredData.map((item) => ({
+        name: item.name || "",
+        category: item.category || "",
+        quantity: item.quantity || 0,
+        unitPrice: item.unitPrice || 0,
+        totalCost: item.price?.cost || 0,
+        orderDate: formatDate(item.createdAt),
+        status: item.status || "",
+        sku: item.sku || "",
+        description: item.description || "",
+      }));
+
+      exportToCSV(exportData, "pending_sale_inventory.csv");
+      toast.success("Pending sale inventory data exported successfully");
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      toast.error("Failed to export inventory data");
+    }
+  };
+
+  // Handle row selection
+  const handleRowSelected = (state) => {
+    setSelectedRows(state.selectedRows);
+  };
+
+  // Toggle batch processing mode
+  const toggleBatchProcessing = () => {
+    setBatchProcessing(!batchProcessing);
+    if (!batchProcessing) {
+      // Entering batch mode - clear any previous selections
+      setSelectedRows([]);
+    }
+  };
+
+  // Handle batch approval
+  const handleBatchApprove = () => {
+    if (selectedRows.length === 0) {
+      toast.warning("Please select at least one item to approve");
+      return;
+    }
+
+    // Get IDs of selected rows
+    const selectedIds = selectedRows.map((row) => row._id);
+    console.log("Approving items with IDs:", selectedIds);
+
+    // Here you would call the API to approve these items
+    // For now, we'll just show a toast and log to console
+    toast.success(`${selectedIds.length} items approved successfully`);
+
+    // Reset selection after processing
+    setSelectedRows([]);
+    setBatchProcessing(false);
+
+    // Refresh data
+    fetchInventoryData();
+  };
+
+  // Handle batch rejection
+  const handleBatchReject = () => {
+    if (selectedRows.length === 0) {
+      toast.warning("Please select at least one item to reject");
+      return;
+    }
+
+    // Get IDs of selected rows
+    const selectedIds = selectedRows.map((row) => row._id);
+    console.log("Rejecting items with IDs:", selectedIds);
+
+    // Here you would call the API to reject these items
+    // For now, we'll just show a toast and log to console
+    toast.success(`${selectedIds.length} items rejected successfully`);
+
+    // Reset selection after processing
+    setSelectedRows([]);
+    setBatchProcessing(false);
+
+    // Refresh data
+    fetchInventoryData();
+  };
   const fetchInventoryData = async () => {
     try {
       setLoading(true);
@@ -160,6 +244,14 @@ const PendingSaleInventory = () => {
 
   // Table columns
   const columns = [
+    {
+      name: "Select",
+      selector: (row) => row._id,
+      sortable: false,
+      omit: !batchProcessing, // Only show when batch processing is active
+      width: "50px",
+      cell: () => <div className="flex justify-center w-full"></div>, // Empty cell for checkbox rendering by DataTable
+    },
     { name: "Name ", selector: (row) => row.name, sortable: true },
     { name: "SKU", selector: (row) => row.sku, sortable: true },
     {
@@ -182,7 +274,6 @@ const PendingSaleInventory = () => {
       },
       sortable: true,
     },
-    ,
     {
       name: "Order Date",
       selector: (row) => formatDate(row.createdAt),
@@ -217,7 +308,7 @@ const PendingSaleInventory = () => {
             className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
             onClick={() => {
               setSelectedOrder(row);
-              setShowDetailsModal(true);
+              // setShowDetailsModal(true);
             }}
           >
             Details
@@ -283,8 +374,22 @@ const PendingSaleInventory = () => {
           />
         </div>
         <div className="flex space-x-2">
-          <button className="btn btn-secondary">Export Orders</button>
-          <button className="btn btn-primary">Batch Process</button>
+          <button
+            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+            onClick={handleExportCSV}
+          >
+            Export CSV
+          </button>
+          <button
+            className={`${
+              batchProcessing
+                ? "bg-red-500 hover:bg-red-600"
+                : "bg-blue-500 hover:bg-blue-600"
+            } text-white px-4 py-2 rounded`}
+            onClick={toggleBatchProcessing}
+          >
+            {batchProcessing ? "Cancel Batch" : "Batch Process"}
+          </button>
         </div>
       </div>
 
@@ -339,6 +444,33 @@ const PendingSaleInventory = () => {
         </div>
       </div>
 
+      {/* Batch Actions */}
+      {batchProcessing && (
+        <div className="mb-4 p-4 bg-gray-100 rounded-lg flex justify-between items-center">
+          <div>
+            <span className="font-medium">
+              {selectedRows.length} items selected
+            </span>
+          </div>
+          <div className="flex space-x-2">
+            <button
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+              onClick={handleBatchApprove}
+              disabled={selectedRows.length === 0}
+            >
+              Approve Selected
+            </button>
+            <button
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+              onClick={handleBatchReject}
+              disabled={selectedRows.length === 0}
+            >
+              Reject Selected
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Data Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <DataTable
@@ -349,6 +481,10 @@ const PendingSaleInventory = () => {
           highlightOnHover
           striped
           subHeader
+          selectableRows={batchProcessing}
+          selectableRowsHighlight={true}
+          onSelectedRowsChange={handleRowSelected}
+          clearSelectedRows={!batchProcessing}
           subHeaderComponent={
             <div className="w-full text-right py-2">
               <span className="text-sm text-gray-600">
@@ -358,160 +494,6 @@ const PendingSaleInventory = () => {
           }
         />
       </div>
-
-      {/* Order Details Modal */}
-      {showDetailsModal && selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-3xl">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-800">
-                Order Details: {selectedOrder.orderNumber}
-              </h2>
-              <button
-                className="text-gray-500 hover:text-gray-700"
-                onClick={() => {
-                  setShowDetailsModal(false);
-                  setSelectedOrder(null);
-                }}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Customer</p>
-                  <p className="text-lg font-bold text-gray-900">
-                    {selectedOrder.customer}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600">
-                    Order Date
-                  </p>
-                  <p className="text-lg font-bold text-gray-900">
-                    {selectedOrder.orderDate}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Status</p>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs ${
-                      selectedOrder.status === "Ready to Ship"
-                        ? "bg-green-100 text-green-800"
-                        : selectedOrder.status === "Processing"
-                        ? "bg-blue-100 text-blue-800"
-                        : selectedOrder.status === "Awaiting Payment"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {selectedOrder.status}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                Order Items
-              </h3>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Item
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Quantity
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Unit Price
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Total
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {selectedOrder.items.map((item, index) => (
-                      <tr key={index}>
-                        <td className="px-4 py-2 text-sm text-gray-900">
-                          {item.name}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-gray-900">
-                          {item.quantity}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-gray-900">
-                          ${item.price.toFixed(2)}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-gray-900">
-                          ${item.total.toFixed(2)}
-                        </td>
-                      </tr>
-                    ))}
-                    <tr className="bg-gray-100">
-                      <td className="px-4 py-2 text-sm font-bold" colSpan="3">
-                        Total
-                      </td>
-                      <td className="px-4 py-2 text-sm font-bold">
-                        ${selectedOrder.totalAmount.toFixed(2)}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                Shipping Information
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">
-                    Expected Ship Date
-                  </p>
-                  <p className="text-lg font-bold text-gray-900">
-                    {selectedOrder.expectedShipDate}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600">
-                    Shipping Method
-                  </p>
-                  <p className="text-lg font-bold text-gray-900">
-                    Standard Shipping
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-4">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  setShowDetailsModal(false);
-                  setSelectedOrder(null);
-                }}
-              >
-                Close
-              </button>
-              <button type="button" className="btn btn-primary">
-                Update Status
-              </button>
-              {selectedOrder.status === "Ready to Ship" && (
-                <button type="button" className="btn btn-success">
-                  Ship Order
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

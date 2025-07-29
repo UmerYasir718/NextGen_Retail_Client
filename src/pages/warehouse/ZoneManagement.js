@@ -1,142 +1,111 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
+import { useLocation } from "react-router-dom";
 import DataTable from "react-data-table-component";
+import { toast } from "react-toastify";
+import zoneAPI from "../../utils/api/zoneAPI";
+import warehouseAPI from "../../utils/api/warehouseAPI";
 
 const ZoneManagement = () => {
   const { user } = useSelector((state) => state.auth);
-  const { selectedCompany } = useSelector((state) => state.company);
+  const location = useLocation();
+
+  // Get warehouseId from URL query params if available
+  const queryParams = new URLSearchParams(location.search);
+  const warehouseIdFromUrl = queryParams.get("warehouseId")
+    ? parseInt(queryParams.get("warehouseId"))
+    : null;
 
   const [filterText, setFilterText] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedZone, setSelectedZone] = useState(null);
-  const [selectedWarehouse, setSelectedWarehouse] = useState(null);
+  const [selectedWarehouse, setSelectedWarehouse] =
+    useState(warehouseIdFromUrl);
   const [warehouses, setWarehouses] = useState([]);
+  const [zones, setZones] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedCompany, setSelectedCompany] = useState(
+    user?.companyId ? { id: user.companyId } : null
+  );
 
   // Form state for new/edit zone
   const [zoneForm, setZoneForm] = useState({
     name: "",
     description: "",
-    warehouseId: "",
-    type: "general",
+    warehouseId: warehouseIdFromUrl ? warehouseIdFromUrl.toString() : "",
+    type: "standard",
     status: "active",
   });
 
-  // Sample data for zones
-  const zonesData = [
-    {
-      id: 1,
-      name: "Zone A",
-      description: "Front storage area",
-      warehouseId: 1,
-      warehouseName: "Main Distribution Center",
-      type: "general",
-      status: "active",
-      shelfCount: 12,
-      binCount: 48,
-      itemCount: 250,
-      lastUpdated: "2023-06-15",
-    },
-    {
-      id: 2,
-      name: "Zone B",
-      description: "Electronics storage",
-      warehouseId: 1,
-      warehouseName: "Main Distribution Center",
-      type: "electronics",
-      status: "active",
-      shelfCount: 8,
-      binCount: 32,
-      itemCount: 180,
-      lastUpdated: "2023-06-12",
-    },
-    {
-      id: 3,
-      name: "Zone C",
-      description: "Clothing and apparel",
-      warehouseId: 2,
-      warehouseName: "West Coast Facility",
-      type: "apparel",
-      status: "active",
-      shelfCount: 15,
-      binCount: 60,
-      itemCount: 320,
-      lastUpdated: "2023-06-10",
-    },
-    {
-      id: 4,
-      name: "Zone D",
-      description: "Home goods",
-      warehouseId: 2,
-      warehouseName: "West Coast Facility",
-      type: "home",
-      status: "maintenance",
-      shelfCount: 10,
-      binCount: 40,
-      itemCount: 0,
-      lastUpdated: "2023-06-18",
-    },
-    {
-      id: 5,
-      name: "Zone E",
-      description: "High-value items",
-      warehouseId: 3,
-      warehouseName: "Central Storage",
-      type: "secure",
-      status: "active",
-      shelfCount: 6,
-      binCount: 24,
-      itemCount: 85,
-      lastUpdated: "2023-06-14",
-    },
-  ];
-
-  // Sample data for warehouses
-  const warehousesData = [
-    {
-      id: 1,
-      name: "Main Distribution Center",
-      location: "New York, NY",
-    },
-    {
-      id: 2,
-      name: "West Coast Facility",
-      location: "Los Angeles, CA",
-    },
-    {
-      id: 3,
-      name: "Central Storage",
-      location: "Chicago, IL",
-    },
-    {
-      id: 4,
-      name: "Southern Hub",
-      location: "Atlanta, GA",
-    },
-  ];
-
-  // Load warehouses on component mount
+  // Fetch warehouses and zones data from backend
   useEffect(() => {
-    // In a real app, this would be an API call
-    setWarehouses(warehousesData);
-  }, []);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  // Filter data based on search input and user's company (if not super_admin)
-  const filteredData = zonesData.filter((item) => {
-    // Filter by warehouse if one is selected
-    if (selectedWarehouse && item.warehouseId !== selectedWarehouse) {
-      return false;
-    }
+        // Fetch warehouses data
+        const companyId = selectedCompany?.id;
+        const warehousesResponse = await warehouseAPI.getWarehouses(companyId);
+        const warehousesData =
+          warehousesResponse && warehousesResponse.data
+            ? warehousesResponse.data
+            : [];
+        setWarehouses(Array.isArray(warehousesData) ? warehousesData : []);
 
-    // Then filter by search text
+        // Fetch zones data based on selected warehouse or all zones
+        let zonesResponse;
+        // if (selectedWarehouse) {
+        //   zonesResponse = await zoneAPI.getZones(selectedWarehouse);
+        // } else {
+        zonesResponse = await zoneAPI.getZones();
+        // }
+
+        // Handle API response correctly
+        const zonesData =
+          zonesResponse && zonesResponse.data ? zonesResponse.data : [];
+        setZones(Array.isArray(zonesData) ? zonesData : []);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError("Failed to load data. Please try again.");
+        toast.error("Failed to load data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [selectedWarehouse, selectedCompany]);
+
+  // Filtered zones based on search text
+  const filteredZones = zones.filter((zone) => {
+    // Filter by search text
     const searchText = filterText.toLowerCase();
     return (
-      (item.name && item.name.toLowerCase().includes(searchText)) ||
-      (item.description && item.description.toLowerCase().includes(searchText)) ||
-      (item.type && item.type.toLowerCase().includes(searchText)) ||
-      (item.warehouseName && item.warehouseName.toLowerCase().includes(searchText))
+      (zone.name && zone.name.toLowerCase().includes(searchText)) ||
+      (zone.description &&
+        zone.description.toLowerCase().includes(searchText)) ||
+      (zone.type && zone.type.toLowerCase().includes(searchText)) ||
+      (zone.warehouseName &&
+        zone.warehouseName.toLowerCase().includes(searchText))
     );
   });
+
+  // Calculate statistics
+  const totalZones = filteredZones.length;
+  const activeZones = filteredZones.filter(
+    (zone) => zone.isActive === true
+  ).length;
+  const totalShelves = filteredZones.reduce(
+    (sum, zone) => sum + (zone.utilization.shelfCount || 0),
+    0
+  );
+  const totalCapacity = filteredZones.reduce(
+    (sum, zone) => sum + (parseInt(zone.capacity) || 0),
+    0
+  );
 
   // Handle form input changes
   const handleInputChange = (e) => {
@@ -148,24 +117,57 @@ const ZoneManagement = () => {
   };
 
   // Handle form submission for new zone
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // In a real app, this would be an API call to create a new zone
-    console.log("Creating new zone:", zoneForm);
-    setShowAddModal(false);
-    // Reset form
-    setZoneForm({
-      name: "",
-      description: "",
-      warehouseId: "",
-      type: "general",
-      status: "active",
-    });
+    try {
+      setLoading(true);
+      console.log(zoneForm);
+      const warehouseId = zoneForm.warehouseId;
+
+      // Create payload for API
+      const zoneData = {
+        name: zoneForm.name,
+        description: zoneForm.description,
+        type: zoneForm.type,
+        status: zoneForm.status,
+      };
+
+      // API call to create zone
+      await zoneAPI.createZone(warehouseId, zoneData);
+
+      // Refresh zones data
+      const zonesResponse = selectedWarehouse
+        ? await zoneAPI.getZones(selectedWarehouse)
+        : await zoneAPI.getZones();
+
+      // Handle API response correctly
+      const zonesData =
+        zonesResponse && zonesResponse.data ? zonesResponse.data : [];
+      setZones(Array.isArray(zonesData) ? zonesData : []);
+      toast.success("Zone created successfully");
+
+      // Reset form and close modal
+      setZoneForm({
+        name: "",
+        description: "",
+        warehouseId: selectedWarehouse ? selectedWarehouse.toString() : "",
+        type: "standard",
+        status: "active",
+      });
+      setShowAddModal(false);
+    } catch (err) {
+      console.error("Error creating zone:", err);
+      toast.error("Failed to create zone");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle edit zone
   const handleEdit = (zone) => {
     setSelectedZone(zone);
+    setSelectedWarehouse(zone.warehouseId);
+    console.log(zone.warehouseId);
     setZoneForm({
       name: zone.name,
       description: zone.description,
@@ -177,18 +179,69 @@ const ZoneManagement = () => {
   };
 
   // Handle update zone
-  const handleUpdate = (e) => {
+  const handleUpdate = async (e) => {
     e.preventDefault();
-    // In a real app, this would be an API call to update the zone
-    console.log("Updating zone:", selectedZone.id, zoneForm);
-    setShowEditModal(false);
+    try {
+      setLoading(true);
+
+      // Create payload for API
+      const zoneData = {
+        name: zoneForm.name,
+        description: zoneForm.description,
+        warehouseId: zoneForm.warehouseId,
+        type: zoneForm.type,
+        status: zoneForm.status,
+      };
+
+      // API call to update zone
+      await zoneAPI.updateZone(selectedZone._id, zoneData);
+
+      // Refresh zones data
+      const zonesResponse = selectedWarehouse
+        ? await zoneAPI.getZones(selectedWarehouse)
+        : await zoneAPI.getZones();
+
+      // Handle API response correctly
+      const zonesData =
+        zonesResponse && zonesResponse.data ? zonesResponse.data : [];
+      setZones(Array.isArray(zonesData) ? zonesData : []);
+      toast.success("Zone updated successfully");
+
+      // Reset and close modal
+      setShowEditModal(false);
+    } catch (err) {
+      console.error("Error updating zone:", err);
+      toast.error("Failed to update zone");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle delete zone
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this zone?")) {
-      // In a real app, this would be an API call to delete the zone
-      console.log("Deleting zone:", id);
+      try {
+        setLoading(true);
+
+        // API call to delete zone
+        await zoneAPI.deleteZone(id);
+
+        // Refresh zones data
+        const zonesResponse = selectedWarehouse
+          ? await zoneAPI.getZones(selectedWarehouse)
+          : await zoneAPI.getZones();
+
+        // Handle API response correctly
+        const zonesData =
+          zonesResponse && zonesResponse.data ? zonesResponse.data : [];
+        setZones(Array.isArray(zonesData) ? zonesData : []);
+        toast.success("Zone deleted successfully");
+      } catch (err) {
+        console.error("Error deleting zone:", err);
+        toast.error("Failed to delete zone");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -197,42 +250,40 @@ const ZoneManagement = () => {
     const warehouseId = e.target.value ? parseInt(e.target.value) : null;
     setSelectedWarehouse(warehouseId);
   };
+  const findWareHouseById = (id) => {
+    if (!id) return null;
+    return warehouses.find((warehouse) => warehouse._id === id)?.name;
+  };
 
   // Table columns
   const columns = [
     { name: "Zone Name", selector: (row) => row.name, sortable: true },
-    { name: "Warehouse", selector: (row) => row.warehouseName, sortable: true },
+    {
+      name: "Warehouse",
+      selector: (row) => findWareHouseById(row.warehouseId),
+      sortable: true,
+    },
     { name: "Type", selector: (row) => row.type, sortable: true },
     {
+      name: "Shelves",
+      selector: (row) => row.utilization.shelfCount || 0,
+      sortable: true,
+    },
+    {
       name: "Status",
-      selector: (row) => row.status,
+      selector: (row) => row.isActive,
       sortable: true,
       cell: (row) => (
         <span
           className={`px-2 py-1 rounded-full text-xs ${
-            row.status === "active"
+            row.isActive === true
               ? "bg-green-100 text-green-800"
               : "bg-yellow-100 text-yellow-800"
           }`}
         >
-          {row.status}
+          {row.isActive === true ? "Active" : "Inactive"}
         </span>
       ),
-    },
-    {
-      name: "Shelves",
-      selector: (row) => row.shelfCount,
-      sortable: true,
-    },
-    {
-      name: "Bins",
-      selector: (row) => row.binCount,
-      sortable: true,
-    },
-    {
-      name: "Items",
-      selector: (row) => row.itemCount,
-      sortable: true,
     },
     {
       name: "Actions",
@@ -252,25 +303,29 @@ const ZoneManagement = () => {
           >
             🗑️
           </button>
-          <button
-            onClick={() => window.location.href = `/warehouse/shelves?zoneId=${row.id}`}
-            className="p-1 text-green-600 hover:text-green-800"
-            title="View Shelves"
-          >
-            🔍
-          </button>
         </div>
       ),
     },
   ];
 
+  // Get selected warehouse details
+  const selectedWarehouseDetails = warehouses.find(
+    (w) => w.id === selectedWarehouse
+  );
+
   return (
     <div className="container-fluid mx-auto px-4 py-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">Zone Management</h1>
+        <h1 className="text-3xl font-bold text-gray-800">
+          {selectedWarehouseDetails
+            ? `Zones in ${selectedWarehouseDetails.name}`
+            : "Zone Management"}
+        </h1>
         <p className="text-gray-600">
-          Manage warehouse zones and their organization
+          {selectedWarehouseDetails
+            ? `Manage zones in ${selectedWarehouseDetails.name} warehouse`
+            : "Manage zones across all warehouses"}
         </p>
       </div>
 
@@ -300,7 +355,7 @@ const ZoneManagement = () => {
           />
         </div>
         <button
-          className="btn btn-primary"
+          className="btn btn-primary w-full md:w-auto"
           onClick={() => setShowAddModal(true)}
         >
           Add New Zone
@@ -313,11 +368,9 @@ const ZoneManagement = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Zones</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {filteredData.length}
-              </p>
+              <p className="text-2xl font-bold text-gray-900">{totalZones}</p>
             </div>
-            <div className="p-3 rounded-full bg-blue-100 text-blue-500">🏷️</div>
+            <div className="p-3 rounded-full bg-blue-100 text-blue-500">🏢</div>
           </div>
         </div>
 
@@ -325,9 +378,7 @@ const ZoneManagement = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Active Zones</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {filteredData.filter((z) => z.status === "active").length}
-              </p>
+              <p className="text-2xl font-bold text-gray-900">{activeZones}</p>
             </div>
             <div className="p-3 rounded-full bg-green-100 text-green-500">
               ✅
@@ -339,11 +390,9 @@ const ZoneManagement = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Shelves</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {filteredData.reduce((sum, zone) => sum + zone.shelfCount, 0)}
-              </p>
+              <p className="text-2xl font-bold text-gray-900">{totalShelves}</p>
             </div>
-            <div className="p-3 rounded-full bg-purple-100 text-purple-500">
+            <div className="p-3 rounded-full bg-yellow-100 text-yellow-500">
               📚
             </div>
           </div>
@@ -352,13 +401,15 @@ const ZoneManagement = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Bins</p>
+              <p className="text-sm font-medium text-gray-600">
+                Total Capacity
+              </p>
               <p className="text-2xl font-bold text-gray-900">
-                {filteredData.reduce((sum, zone) => sum + zone.binCount, 0)}
+                {totalCapacity}
               </p>
             </div>
-            <div className="p-3 rounded-full bg-yellow-100 text-yellow-500">
-              📦
+            <div className="p-3 rounded-full bg-purple-100 text-purple-500">
+              📊
             </div>
           </div>
         </div>
@@ -366,18 +417,25 @@ const ZoneManagement = () => {
 
       {/* Data Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
+        {error && (
+          <div className="p-4 bg-red-100 text-red-700 border-l-4 border-red-500">
+            {error}
+          </div>
+        )}
         <DataTable
           columns={columns}
-          data={filteredData}
+          data={filteredZones}
           pagination
           responsive
           highlightOnHover
           striped
+          progressPending={loading}
+          progressComponent={<div className="p-4">Loading...</div>}
           subHeader
           subHeaderComponent={
             <div className="w-full text-right py-2">
               <span className="text-sm text-gray-600">
-                {filteredData.length} zones found
+                {filteredZones.length} zones found
               </span>
             </div>
           }
@@ -386,10 +444,18 @@ const ZoneManagement = () => {
 
       {/* Add Zone Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-            <div className="p-6">
-              <h2 className="text-xl font-bold mb-4">Add New Zone</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Add New Zone</h2>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={() => setShowAddModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[70vh]">
               <form onSubmit={handleSubmit}>
                 <div className="space-y-4">
                   <div>
@@ -403,13 +469,13 @@ const ZoneManagement = () => {
                       id="warehouseId"
                       name="warehouseId"
                       className="form-input w-full"
-                      value={zoneForm.warehouseId}
+                      value={zoneForm._id}
                       onChange={handleInputChange}
                       required
                     >
                       <option value="">Select Warehouse</option>
                       {warehouses.map((warehouse) => (
-                        <option key={warehouse.id} value={warehouse.id}>
+                        <option key={warehouse._id} value={warehouse._id}>
                           {warehouse.name}
                         </option>
                       ))}
@@ -447,7 +513,7 @@ const ZoneManagement = () => {
                       className="form-input w-full"
                       value={zoneForm.description}
                       onChange={handleInputChange}
-                      rows="3"
+                      rows="2"
                     />
                   </div>
 
@@ -465,13 +531,10 @@ const ZoneManagement = () => {
                       value={zoneForm.type}
                       onChange={handleInputChange}
                     >
-                      <option value="general">General</option>
-                      <option value="electronics">Electronics</option>
-                      <option value="apparel">Apparel</option>
-                      <option value="home">Home Goods</option>
-                      <option value="secure">Secure/High Value</option>
-                      <option value="refrigerated">Refrigerated</option>
+                      <option value="standard">Standard</option>
+                      <option value="cold-storage">Cold Storage</option>
                       <option value="hazardous">Hazardous Materials</option>
+                      <option value="high-security">High Security</option>
                     </select>
                   </div>
 
@@ -514,11 +577,19 @@ const ZoneManagement = () => {
       )}
 
       {/* Edit Zone Modal */}
-      {showEditModal && selectedZone && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-            <div className="p-6">
-              <h2 className="text-xl font-bold mb-4">Edit Zone</h2>
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Edit Zone</h2>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={() => setShowEditModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[70vh]">
               <form onSubmit={handleUpdate}>
                 <div className="space-y-4">
                   <div>
@@ -538,7 +609,7 @@ const ZoneManagement = () => {
                     >
                       <option value="">Select Warehouse</option>
                       {warehouses.map((warehouse) => (
-                        <option key={warehouse.id} value={warehouse.id}>
+                        <option key={warehouse._id} value={warehouse._id}>
                           {warehouse.name}
                         </option>
                       ))}
@@ -576,7 +647,7 @@ const ZoneManagement = () => {
                       className="form-input w-full"
                       value={zoneForm.description}
                       onChange={handleInputChange}
-                      rows="3"
+                      rows="2"
                     />
                   </div>
 
@@ -594,13 +665,10 @@ const ZoneManagement = () => {
                       value={zoneForm.type}
                       onChange={handleInputChange}
                     >
-                      <option value="general">General</option>
-                      <option value="electronics">Electronics</option>
-                      <option value="apparel">Apparel</option>
-                      <option value="home">Home Goods</option>
-                      <option value="secure">Secure/High Value</option>
-                      <option value="refrigerated">Refrigerated</option>
+                      <option value="standard">Standard</option>
+                      <option value="cold-storage">Cold Storage</option>
                       <option value="hazardous">Hazardous Materials</option>
+                      <option value="high-security">High Security</option>
                     </select>
                   </div>
 

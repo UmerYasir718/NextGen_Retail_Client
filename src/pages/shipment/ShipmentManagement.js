@@ -1,119 +1,112 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import DataTable from "react-data-table-component";
+import { toast } from "react-toastify";
+import ShipmentModal from "../../components/shipment/ShipmentModal";
+import shipmentAPI from "../../utils/api/shipmentAPI";
 
 const ShipmentManagement = () => {
   const { user } = useSelector((state) => state.auth);
 
   const [filterText, setFilterText] = useState("");
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
+  // Loading state for API calls
+  const [loading, setLoading] = useState(false);
+  const [shipments, setShipments] = useState([]);
   const [selectedShipment, setSelectedShipment] = useState(null);
+  
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState("add");
 
-  // Sample data for shipments
-  const shipmentsData = [
-    {
-      id: "SHP-2023-001",
-      origin: "Main Distribution Center",
-      destination: "West Coast Facility",
-      items: 45,
-      weight: "320 kg",
-      shipDate: "2023-06-15",
-      estimatedArrival: "2023-06-18",
-      status: "in-transit",
-      carrier: "Express Logistics",
-      trackingNumber: "EL789456123",
-      companyId: 1,
-      companyName: "NextGen Retail Corp",
-    },
-    {
-      id: "SHP-2023-002",
-      origin: "Main Distribution Center",
-      destination: "Northeast Depot",
-      items: 32,
-      weight: "180 kg",
-      shipDate: "2023-06-14",
-      estimatedArrival: "2023-06-16",
-      status: "delivered",
-      carrier: "Fast Freight",
-      trackingNumber: "FF456789012",
-      companyId: 1,
-      companyName: "NextGen Retail Corp",
-    },
-    {
-      id: "SHP-2023-003",
-      origin: "Central Storage",
-      destination: "Southern Hub",
-      items: 28,
-      weight: "210 kg",
-      shipDate: "2023-06-16",
-      estimatedArrival: "2023-06-19",
-      status: "processing",
-      carrier: "Express Logistics",
-      trackingNumber: "EL789456124",
-      companyId: 2,
-      companyName: "Fashion Forward Inc",
-    },
-    {
-      id: "SHP-2023-004",
-      origin: "Tech Storage Facility",
-      destination: "West Coast Facility",
-      items: 15,
-      weight: "95 kg",
-      shipDate: "2023-06-12",
-      estimatedArrival: "2023-06-15",
-      status: "delivered",
-      carrier: "Reliable Shipping",
-      trackingNumber: "RS123456789",
-      companyId: 3,
-      companyName: "Tech Gadgets Ltd",
-    },
-    {
-      id: "SHP-2023-005",
-      origin: "Pacific Northwest Storage",
-      destination: "Main Distribution Center",
-      items: 50,
-      weight: "350 kg",
-      shipDate: "2023-06-17",
-      estimatedArrival: "2023-06-20",
-      status: "processing",
-      carrier: "Fast Freight",
-      trackingNumber: "FF456789013",
-      companyId: 5,
-      companyName: "Sports Unlimited",
-    },
-    {
-      id: "SHP-2023-006",
-      origin: "West Coast Facility",
-      destination: "Southern Hub",
-      items: 22,
-      weight: "140 kg",
-      shipDate: "2023-06-13",
-      estimatedArrival: "2023-06-17",
-      status: "in-transit",
-      carrier: "Express Logistics",
-      trackingNumber: "EL789456125",
-      companyId: 1,
-      companyName: "NextGen Retail Corp",
-    },
-    {
-      id: "SHP-2023-007",
-      origin: "Main Distribution Center",
-      destination: "Tech Storage Facility",
-      items: 18,
-      weight: "120 kg",
-      shipDate: "2023-06-10",
-      estimatedArrival: "2023-06-14",
-      status: "delayed",
-      carrier: "Reliable Shipping",
-      trackingNumber: "RS123456790",
-      companyId: 3,
-      companyName: "Tech Gadgets Ltd",
-    },
-  ];
+  // Fetch shipments from API
+  const fetchShipments = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await shipmentAPI.getShipments();
+      console.log("Fetched shipments:", response.data);
+      setShipments(response.data || []);
+    } catch (error) {
+      console.error("Error fetching shipments:", error);
+      toast.error("Failed to load shipments");
+      
+      // Sample data for shipments (fallback)
+      const sampleShipmentsData = [
+        {
+          id: "SHP-2023-001",
+          origin: "Main Distribution Center",
+          destination: "West Coast Facility",
+          items: 45,
+          weight: "320 kg",
+          shipDate: "2023-06-15",
+          estimatedArrival: "2023-06-18",
+          status: "in-transit",
+          carrier: "Express Logistics",
+          trackingNumber: "EL789456123",
+          companyId: 1,
+          companyName: "NextGen Retail Corp",
+        },
+        // Other sample shipments...
+      ];
+      
+      // Fallback to sample data if API fails
+      setShipments(sampleShipmentsData);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  // Fetch shipments on component mount
+  useEffect(() => {
+    fetchShipments();
+  }, [fetchShipments]);
+
+  // Open modal in add mode
+
+  // Open modal in add mode
+  const handleAddShipment = () => {
+    setModalMode("add");
+    setSelectedShipment(null);
+    setModalOpen(true);
+  };
+
+  // Open modal in edit mode
+  const handleEditShipment = (shipment) => {
+    setModalMode("edit");
+    setSelectedShipment(shipment);
+    setModalOpen(true);
+  };
+
+  // Open modal in view mode
+  const handleViewShipment = (shipment) => {
+    setModalMode("view");
+    setSelectedShipment(shipment);
+    setModalOpen(true);
+  };
+
+  // Handle shipment deletion
+  const handleDeleteShipment = async (shipmentId) => {
+    if (window.confirm("Are you sure you want to delete this shipment?")) {
+      try {
+        await shipmentAPI.deleteShipment(shipmentId);
+        toast.success("Shipment deleted successfully");
+        fetchShipments(); // Refresh the list
+      } catch (error) {
+        console.error("Error deleting shipment:", error);
+        toast.error("Failed to delete shipment");
+      }
+    }
+  };
+
+  // Handle modal submission
+  const handleModalSubmit = async (formData) => {
+    // Modal will handle the API call
+    // Just refresh the list after submission
+    fetchShipments();
+    setModalOpen(false);
+  };
 
   // Filter data based on search input and user's company (if not super_admin)
-  const filteredData = shipmentsData.filter((item) => {
+  const filteredData = shipments.filter((item) => {
     // First filter by company if user is not super_admin
     if (user.role !== "super_admin" && user.companyId !== item.companyId) {
       return false;
@@ -135,14 +128,20 @@ const ShipmentManagement = () => {
 
   // Status display mapper
   const statusDisplayMap = {
-    processing: { label: "Processing", class: "bg-blue-100 text-blue-800" },
-    "in-transit": {
+    "Pending": { label: "Pending", class: "bg-blue-100 text-blue-800" },
+    "In Transit": {
       label: "In Transit",
       class: "bg-yellow-100 text-yellow-800",
     },
-    delivered: { label: "Delivered", class: "bg-green-100 text-green-800" },
-    delayed: { label: "Delayed", class: "bg-red-100 text-red-800" },
-    cancelled: { label: "Cancelled", class: "bg-gray-100 text-gray-800" },
+    "Delivered": { label: "Delivered", class: "bg-green-100 text-green-800" },
+    "Delayed": { label: "Delayed", class: "bg-red-100 text-red-800" },
+    "Cancelled": { label: "Cancelled", class: "bg-gray-100 text-gray-800" },
+    // Fallback for old data format
+    "processing": { label: "Pending", class: "bg-blue-100 text-blue-800" },
+    "in-transit": { label: "In Transit", class: "bg-yellow-100 text-yellow-800" },
+    "delivered": { label: "Delivered", class: "bg-green-100 text-green-800" },
+    "delayed": { label: "Delayed", class: "bg-red-100 text-red-800" },
+    "cancelled": { label: "Cancelled", class: "bg-gray-100 text-gray-800" },
   };
 
   // Table columns
@@ -174,15 +173,21 @@ const ShipmentManagement = () => {
         <div className="flex space-x-2">
           <button
             className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-            onClick={() => {
-              setSelectedShipment(row);
-              setShowViewModal(true);
-            }}
+            onClick={() => handleViewShipment(row)}
           >
             View
           </button>
-          <button className="px-2 py-1 text-xs bg-purple-500 text-white rounded hover:bg-purple-600">
-            Track
+          <button
+            className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+            onClick={() => handleEditShipment(row)}
+          >
+            Edit
+          </button>
+          <button
+            className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+            onClick={() => handleDeleteShipment(row.id)}
+          >
+            Delete
           </button>
         </div>
       ),
@@ -201,59 +206,19 @@ const ShipmentManagement = () => {
   // Calculate shipment statistics
   const totalShipments = filteredData.length;
   const processingShipments = filteredData.filter(
-    (shipment) => shipment.status === "processing"
+    (shipment) => shipment.status === "Pending"
   ).length;
   const inTransitShipments = filteredData.filter(
-    (shipment) => shipment.status === "in-transit"
+    (shipment) => shipment.status === "In Transit"
   ).length;
   const deliveredShipments = filteredData.filter(
-    (shipment) => shipment.status === "delivered"
+    (shipment) => shipment.status === "Delivered"
   ).length;
   const delayedShipments = filteredData.filter(
-    (shipment) => shipment.status === "delayed"
+    (shipment) => shipment.status === "Delayed"
   ).length;
 
-  // Sample shipment items for the selected shipment
-  const getShipmentItems = (shipmentId) => {
-    // In a real app, this would fetch from an API
-    return [
-      {
-        id: 1,
-        sku: "PROD-001",
-        name: "Smartphone X Pro",
-        quantity: 10,
-        price: 899.99,
-      },
-      {
-        id: 2,
-        sku: "PROD-015",
-        name: "Wireless Earbuds",
-        quantity: 15,
-        price: 129.99,
-      },
-      {
-        id: 3,
-        sku: "PROD-023",
-        name: "Smart Watch",
-        quantity: 8,
-        price: 249.99,
-      },
-      {
-        id: 4,
-        sku: "PROD-047",
-        name: "Tablet Pro",
-        quantity: 5,
-        price: 649.99,
-      },
-      {
-        id: 5,
-        sku: "PROD-089",
-        name: "Bluetooth Speaker",
-        quantity: 7,
-        price: 79.99,
-      },
-    ];
-  };
+
 
   return (
     <div className="container-fluid mx-auto px-4 py-6">
@@ -280,11 +245,19 @@ const ShipmentManagement = () => {
         </div>
         <button
           className="btn btn-primary"
-          onClick={() => setShowAddModal(true)}
+          onClick={handleAddShipment}
         >
           Create New Shipment
         </button>
       </div>
+
+      {/* Loading indicator */}
+      {loading && (
+        <div className="flex justify-center items-center mb-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <span className="ml-2">Loading shipments...</span>
+        </div>
+      )}
 
       {/* Shipment Stats */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
@@ -375,204 +348,19 @@ const ShipmentManagement = () => {
         />
       </div>
 
-      {/* View Shipment Modal */}
-      {showViewModal && selectedShipment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-800">
-                Shipment Details: {selectedShipment.id}
-              </h2>
-              <button
-                className="text-gray-500 hover:text-gray-700"
-                onClick={() => {
-                  setShowViewModal(false);
-                  setSelectedShipment(null);
-                }}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                  Shipment Information
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Status:</span>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs ${
-                        statusDisplayMap[selectedShipment.status].class
-                      }`}
-                    >
-                      {statusDisplayMap[selectedShipment.status].label}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Origin:</span>
-                    <span className="font-medium">
-                      {selectedShipment.origin}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Destination:</span>
-                    <span className="font-medium">
-                      {selectedShipment.destination}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Ship Date:</span>
-                    <span className="font-medium">
-                      {selectedShipment.shipDate}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Estimated Arrival:</span>
-                    <span className="font-medium">
-                      {selectedShipment.estimatedArrival}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Total Items:</span>
-                    <span className="font-medium">
-                      {selectedShipment.items}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Weight:</span>
-                    <span className="font-medium">
-                      {selectedShipment.weight}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                  Carrier Information
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Carrier:</span>
-                    <span className="font-medium">
-                      {selectedShipment.carrier}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Tracking Number:</span>
-                    <span className="font-medium">
-                      {selectedShipment.trackingNumber}
-                    </span>
-                  </div>
-                  <div className="mt-4">
-                    <button className="btn btn-primary w-full">
-                      Track Shipment
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">
-              Shipment Items
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      SKU
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Product Name
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Quantity
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Unit Price
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {getShipmentItems(selectedShipment.id).map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {item.sku}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {item.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {item.quantity}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${item.price.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${(item.quantity * item.price).toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-gray-50">
-                    <td
-                      colSpan="3"
-                      className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
-                    ></td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      Total:
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      $
-                      {getShipmentItems(selectedShipment.id)
-                        .reduce(
-                          (sum, item) => sum + item.quantity * item.price,
-                          0
-                        )
-                        .toFixed(2)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-
-            <div className="mt-6 flex justify-end space-x-4">
-              <button
-                className="btn btn-secondary"
-                onClick={() => {
-                  setShowViewModal(false);
-                  setSelectedShipment(null);
-                }}
-              >
-                Close
-              </button>
-              <button className="btn btn-primary">Print Details</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Shipment Modal - Management Version */}
+      <ShipmentModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        mode={modalMode}
+        initialData={selectedShipment}
+        onSubmit={handleModalSubmit}
+        customTitle={`${modalMode === 'add' ? 'Create' : modalMode === 'edit' ? 'Edit' : 'View'} Shipment - Management Portal`}
+        theme="management"
+        showCompanySelector={user.role === "super_admin"}
+        showAdvancedOptions={true}
+        allowDocumentUpload={true}
+      />
     </div>
   );
 };

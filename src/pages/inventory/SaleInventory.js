@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import DataTable from "react-data-table-component";
-import { inventoryAPI } from "../../utils/helpfunction";
+import { inventoryAPI, exportToCSV, formatDate } from "../../utils/helpfunction";
 import { toast } from "react-toastify";
 
 const SaleInventory = () => {
@@ -12,7 +12,7 @@ const SaleInventory = () => {
   const [filterText, setFilterText] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showAddModal, setShowAddModal] = useState(false);
+  // const [showAddModal, setShowAddModal] = useState(false);
   const [newItem, setNewItem] = useState({
     name: "",
     category: "",
@@ -140,6 +140,31 @@ const SaleInventory = () => {
   useEffect(() => {
     fetchInventoryData();
   }, []);
+  
+  // Handle CSV export
+  const handleExportCSV = () => {
+    try {
+      // Prepare data for export (remove complex objects)
+      const exportData = filteredData.map(item => ({
+        name: item.name || '',
+        category: item.category || '',
+        quantity: item.quantity || 0,
+        unitPrice: item.unitPrice || 0,
+        totalValue: item.price?.retail || 0,
+        location: item.location?.warehouseId || '',
+        status: item.status || '',
+        sku: item.sku || '',
+        description: item.description || '',
+        dateAdded: formatDate(item.createdAt)
+      }));
+      
+      exportToCSV(exportData, 'sale_inventory.csv');
+      toast.success("Sale inventory data exported successfully");
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      toast.error("Failed to export inventory data");
+    }
+  };
   const fetchInventoryData = async () => {
     try {
       setLoading(true);
@@ -258,7 +283,7 @@ const SaleInventory = () => {
     e.preventDefault();
     // In a real application, this would send data to the backend
     // For now, we'll just close the modal
-    setShowAddModal(false);
+    // setShowAddModal(false);
     setNewItem({
       name: "",
       category: "",
@@ -325,13 +350,18 @@ const SaleInventory = () => {
           />
         </div>
         <div className="flex space-x-2">
-          <button
+          {/* <button
             className="btn btn-primary"
             onClick={() => setShowAddModal(true)}
           >
             Add New Item
+          </button> */}
+          <button 
+            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+            onClick={handleExportCSV}
+          >
+            Export CSV
           </button>
-          <button className="btn btn-secondary">Export Inventory</button>
         </div>
       </div>
 
@@ -409,203 +439,6 @@ const SaleInventory = () => {
           }
         />
       </div>
-
-      {/* Add New Item Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-800">
-                Add New Inventory Item
-              </h2>
-              <button
-                className="text-gray-500 hover:text-gray-700"
-                onClick={() => setShowAddModal(false)}
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label
-                    className="block text-gray-700 text-sm font-bold mb-2"
-                    htmlFor="name"
-                  >
-                    Item Name
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    className="form-input"
-                    value={newItem.name}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label
-                    className="block text-gray-700 text-sm font-bold mb-2"
-                    htmlFor="category"
-                  >
-                    Category
-                  </label>
-                  <select
-                    id="category"
-                    name="category"
-                    className="form-input"
-                    value={newItem.category}
-                    onChange={handleInputChange}
-                    required
-                  >
-                    <option value="">Select Category</option>
-                    <option value="Electronics">Electronics</option>
-                    <option value="Furniture">Furniture</option>
-                    <option value="Office Supplies">Office Supplies</option>
-                    <option value="Clothing">Clothing</option>
-                    <option value="Food">Food</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label
-                    className="block text-gray-700 text-sm font-bold mb-2"
-                    htmlFor="sku"
-                  >
-                    SKU
-                  </label>
-                  <input
-                    type="text"
-                    id="sku"
-                    name="sku"
-                    className="form-input"
-                    value={newItem.sku}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label
-                    className="block text-gray-700 text-sm font-bold mb-2"
-                    htmlFor="quantity"
-                  >
-                    Quantity
-                  </label>
-                  <input
-                    type="number"
-                    id="quantity"
-                    name="quantity"
-                    className="form-input"
-                    value={newItem.quantity}
-                    onChange={handleInputChange}
-                    min="0"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label
-                    className="block text-gray-700 text-sm font-bold mb-2"
-                    htmlFor="unitPrice"
-                  >
-                    Unit Price ($)
-                  </label>
-                  <input
-                    type="number"
-                    id="unitPrice"
-                    name="unitPrice"
-                    className="form-input"
-                    value={newItem.unitPrice}
-                    onChange={handleInputChange}
-                    min="0.01"
-                    step="0.01"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label
-                    className="block text-gray-700 text-sm font-bold mb-2"
-                    htmlFor="totalValue"
-                  >
-                    Total Value ($)
-                  </label>
-                  <input
-                    type="number"
-                    id="totalValue"
-                    name="totalValue"
-                    className="form-input"
-                    value={newItem.totalValue}
-                    readOnly
-                  />
-                </div>
-
-                <div>
-                  <label
-                    className="block text-gray-700 text-sm font-bold mb-2"
-                    htmlFor="location"
-                  >
-                    Location
-                  </label>
-                  <select
-                    id="location"
-                    name="location"
-                    className="form-input"
-                    value={newItem.location}
-                    onChange={handleInputChange}
-                    required
-                  >
-                    <option value="">Select Location</option>
-                    <option value="Warehouse A">Warehouse A</option>
-                    <option value="Warehouse B">Warehouse B</option>
-                    <option value="Store 1">Store 1</option>
-                    <option value="Store 2">Store 2</option>
-                    <option value="Store 3">Store 3</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label
-                    className="block text-gray-700 text-sm font-bold mb-2"
-                    htmlFor="status"
-                  >
-                    Status
-                  </label>
-                  <select
-                    id="status"
-                    name="status"
-                    className="form-input"
-                    value={newItem.status}
-                    onChange={handleInputChange}
-                    required
-                  >
-                    <option value="In Stock">In Stock</option>
-                    <option value="Low Stock">Low Stock</option>
-                    <option value="Out of Stock">Out of Stock</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex justify-end space-x-4">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowAddModal(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Add Item
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

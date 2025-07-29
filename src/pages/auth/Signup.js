@@ -11,7 +11,7 @@ const Signup = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    username: "",
+    name: "",
     companyName: "",
     phone: "",
   });
@@ -52,7 +52,7 @@ const Signup = () => {
       register({
         email: formData.email,
         password: formData.password,
-        username: formData.username,
+        name: formData.name,
         companyName: formData.companyName,
         phone: formData.phone,
       })
@@ -101,19 +101,19 @@ const Signup = () => {
 
         <div className="mb-4">
           <label
-            htmlFor="username"
+            htmlFor="name"
             className="block text-gray-800 text-sm font-bold mb-2"
           >
-            Username
+            name
           </label>
           <input
             type="text"
-            id="username"
-            name="username"
-            value={formData.username}
+            id="name"
+            name="name"
+            value={formData.name}
             onChange={handleChange}
             className="form-input"
-            placeholder="Choose a username"
+            placeholder="Choose a name"
             required
           />
         </div>

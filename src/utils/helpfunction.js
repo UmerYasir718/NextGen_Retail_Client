@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // Base URL for API
-export const API_BASE_URL = "http://192.168.0.107:5000/api";
+export const API_BASE_URL = "https://nextgenretail.site/server/api";
 
 // Create axios instance with default config
 const api = axios.create({
@@ -56,7 +56,10 @@ export const authAPI = {
   // Superadmin login (different URL)
   superadminLogin: async (email, password) => {
     try {
-      const response = await api.post("/auth/superadmin/login", { email, password });
+      const response = await api.post("/auth/superadmin/login", {
+        email,
+        password,
+      });
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -96,7 +99,23 @@ export const authAPI = {
   // Reset password with token
   resetPassword: async (token, newPassword) => {
     try {
-      const response = await api.put("/auth/reset-password", { token, newPassword });
+      const response = await api.put("/auth/reset-password", {
+        token,
+        newPassword,
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Update password
+  updatePassword: async (currentPassword, newPassword) => {
+    try {
+      const response = await api.put("/auth/update-password", {
+        currentPassword,
+        newPassword,
+      });
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -167,9 +186,27 @@ export const userAPI = {
       throw error.response ? error.response.data : error;
     }
   },
+
+  // Update user role
+  updateUserRole: async (userId, roleData) => {
+    try {
+      const response = await api.put(`/users/${userId}/role`, roleData);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Get user roles
+  getUserRoles: async () => {
+    try {
+      const response = await api.get(`/users/roles`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
 };
-
-
 
 // Company API functions
 export const companyAPI = {
@@ -232,6 +269,16 @@ export const companyAPI = {
       throw error.response ? error.response.data : error;
     }
   },
+
+  // Get company dashboard statistics
+  getCompanyDashboardStats: async () => {
+    try {
+      const response = await api.get("/companies/dashboard/stats");
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
 };
 
 // Inventory API functions
@@ -272,7 +319,9 @@ export const inventoryAPI = {
   getPendingSaleInventory: async (companyId = null) => {
     try {
       const params = companyId ? { companyId } : {};
-      const response = await api.get("/inventory/status/sale-pending", { params });
+      const response = await api.get("/inventory/status/sale-pending", {
+        params,
+      });
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -294,6 +343,7 @@ export const inventoryAPI = {
   addInventoryItem: async (inventoryData) => {
     try {
       const response = await api.post("/inventory", inventoryData);
+      console.log("response", response);
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -383,6 +433,29 @@ export const inventoryAPI = {
       throw error.response ? error.response.data : error;
     }
   },
+
+  // Get inventory statistics
+  getInventoryStats: async (companyId = null) => {
+    try {
+      const params = companyId ? { companyId } : {};
+      const response = await api.get("/inventory/stats", { params });
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Get inventory by location (warehouse, zone, shelf, bin)
+  getInventoryByLocation: async (locationType, locationId) => {
+    try {
+      const response = await api.get(
+        `/inventory/location/${locationType}/${locationId}`
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
 };
 
 // Plan API functions
@@ -440,7 +513,17 @@ export const planAPI = {
   // Create checkout session for plan
   createCheckoutSession: async (planId) => {
     try {
-      const response = await api.post(`/plans/checkout/${planId}`);
+      const response = await api.post(`/plans/${planId}/checkout`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Assign plan to company (SuperAdmin only)
+  assignPlanToCompany: async (planId, companyId) => {
+    try {
+      const response = await api.post(`/plans/${planId}/assign/${companyId}`);
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -523,6 +606,26 @@ export const warehouseAPI = {
       throw error.response ? error.response.data : error;
     }
   },
+
+  // Get warehouse structure (zones, shelves, bins)
+  getWarehouseStructure: async (warehouseId) => {
+    try {
+      const response = await api.get(`/warehouses/${warehouseId}/structure`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Get warehouse statistics
+  getWarehouseStats: async (warehouseId) => {
+    try {
+      const response = await api.get(`/warehouses/${warehouseId}/stats`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
 };
 
 // Zone API functions
@@ -540,7 +643,9 @@ export const zoneAPI = {
   // Get single zone
   getZoneById: async (warehouseId, zoneId) => {
     try {
-      const response = await api.get(`/warehouses/${warehouseId}/zones/${zoneId}`);
+      const response = await api.get(
+        `/warehouses/${warehouseId}/zones/${zoneId}`
+      );
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -550,7 +655,10 @@ export const zoneAPI = {
   // Create zone
   createZone: async (warehouseId, zoneData) => {
     try {
-      const response = await api.post(`/warehouses/${warehouseId}/zones`, zoneData);
+      const response = await api.post(
+        `/warehouses/${warehouseId}/zones`,
+        zoneData
+      );
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -560,7 +668,10 @@ export const zoneAPI = {
   // Update zone
   updateZone: async (warehouseId, zoneId, zoneData) => {
     try {
-      const response = await api.put(`/warehouses/${warehouseId}/zones/${zoneId}`, zoneData);
+      const response = await api.put(
+        `/warehouses/${warehouseId}/zones/${zoneId}`,
+        zoneData
+      );
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -570,7 +681,9 @@ export const zoneAPI = {
   // Delete zone
   deleteZone: async (warehouseId, zoneId) => {
     try {
-      const response = await api.delete(`/warehouses/${warehouseId}/zones/${zoneId}`);
+      const response = await api.delete(
+        `/warehouses/${warehouseId}/zones/${zoneId}`
+      );
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -580,10 +693,10 @@ export const zoneAPI = {
 
 // Shelf API functions
 export const shelfAPI = {
-  // Get all shelves
-  getShelves: async () => {
+  // Get all shelves in a zone
+  getShelves: async (zoneId) => {
     try {
-      const response = await api.get("/shelves");
+      const response = await api.get(`/zones/${zoneId}/shelves`);
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -591,9 +704,9 @@ export const shelfAPI = {
   },
 
   // Get shelf by ID
-  getShelfById: async (shelfId) => {
+  getShelfById: async (zoneId, shelfId) => {
     try {
-      const response = await api.get(`/shelves/${shelfId}`);
+      const response = await api.get(`/zones/${zoneId}/shelves/${shelfId}`);
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -601,9 +714,9 @@ export const shelfAPI = {
   },
 
   // Create shelf
-  createShelf: async (shelfData) => {
+  createShelf: async (zoneId, shelfData) => {
     try {
-      const response = await api.post("/shelves", shelfData);
+      const response = await api.post(`/zones/${zoneId}/shelves`, shelfData);
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -611,9 +724,12 @@ export const shelfAPI = {
   },
 
   // Update shelf
-  updateShelf: async (shelfId, shelfData) => {
+  updateShelf: async (zoneId, shelfId, shelfData) => {
     try {
-      const response = await api.put(`/shelves/${shelfId}`, shelfData);
+      const response = await api.put(
+        `/zones/${zoneId}/shelves/${shelfId}`,
+        shelfData
+      );
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -621,9 +737,9 @@ export const shelfAPI = {
   },
 
   // Delete shelf
-  deleteShelf: async (shelfId) => {
+  deleteShelf: async (zoneId, shelfId) => {
     try {
-      const response = await api.delete(`/shelves/${shelfId}`);
+      const response = await api.delete(`/zones/${zoneId}/shelves/${shelfId}`);
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -643,10 +759,10 @@ export const shelfAPI = {
 
 // Bin API functions
 export const binAPI = {
-  // Get all bins
-  getBins: async () => {
+  // Get all bins on a shelf
+  getBins: async (shelfId) => {
     try {
-      const response = await api.get("/bins");
+      const response = await api.get(`/shelves/${shelfId}/bins`);
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -654,9 +770,9 @@ export const binAPI = {
   },
 
   // Get bin by ID
-  getBinById: async (binId) => {
+  getBinById: async (shelfId, binId) => {
     try {
-      const response = await api.get(`/bins/${binId}`);
+      const response = await api.get(`/shelves/${shelfId}/bins/${binId}`);
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -664,9 +780,9 @@ export const binAPI = {
   },
 
   // Create bin
-  createBin: async (binData) => {
+  createBin: async (shelfId, binData) => {
     try {
-      const response = await api.post("/bins", binData);
+      const response = await api.post(`/shelves/${shelfId}/bins`, binData);
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -674,9 +790,12 @@ export const binAPI = {
   },
 
   // Update bin
-  updateBin: async (binId, binData) => {
+  updateBin: async (shelfId, binId, binData) => {
     try {
-      const response = await api.put(`/bins/${binId}`, binData);
+      const response = await api.put(
+        `/shelves/${shelfId}/bins/${binId}`,
+        binData
+      );
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -684,9 +803,9 @@ export const binAPI = {
   },
 
   // Delete bin
-  deleteBin: async (binId) => {
+  deleteBin: async (shelfId, binId) => {
     try {
-      const response = await api.delete(`/bins/${binId}`);
+      const response = await api.delete(`/shelves/${shelfId}/bins/${binId}`);
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -694,9 +813,11 @@ export const binAPI = {
   },
 
   // Get inventory in bin
-  getBinInventory: async (binId) => {
+  getBinInventory: async (shelfId, binId) => {
     try {
-      const response = await api.get(`/bins/${binId}/inventory`);
+      const response = await api.get(
+        `/shelves/${shelfId}/bins/${binId}/inventory`
+      );
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -704,9 +825,12 @@ export const binAPI = {
   },
 
   // Update bin capacity
-  updateBinCapacity: async (binId, capacityData) => {
+  updateBinCapacity: async (shelfId, binId, capacityData) => {
     try {
-      const response = await api.put(`/bins/${binId}/capacity`, capacityData);
+      const response = await api.put(
+        `/shelves/${shelfId}/bins/${binId}/capacity`,
+        capacityData
+      );
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -827,11 +951,15 @@ export const shipmentAPI = {
   // Upload shipment document
   uploadShipmentDocument: async (shipmentId, formData) => {
     try {
-      const response = await api.put(`/shipments/${shipmentId}/document`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await api.put(
+        `/shipments/${shipmentId}/document`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -842,6 +970,53 @@ export const shipmentAPI = {
   getShipmentStats: async () => {
     try {
       const response = await api.get("/shipments/stats");
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Track shipment
+  trackShipment: async (trackingNumber) => {
+    try {
+      const response = await api.get(`/shipments/track/${trackingNumber}`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Get shipment documents
+  getShipmentDocuments: async (shipmentId) => {
+    try {
+      const response = await api.get(`/shipments/${shipmentId}/documents`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Download shipment document
+  downloadShipmentDocument: async (shipmentId, documentId) => {
+    try {
+      const response = await api.get(
+        `/shipments/${shipmentId}/documents/${documentId}/download`,
+        {
+          responseType: "blob",
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Delete shipment document
+  deleteShipmentDocument: async (shipmentId, documentId) => {
+    try {
+      const response = await api.delete(
+        `/shipments/${shipmentId}/documents/${documentId}`
+      );
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -984,12 +1159,137 @@ export const helpfileAPI = {
   // Search help files
   searchHelpFiles: async (query) => {
     try {
-      const response = await api.get("/helpfiles/search", { params: { query } });
+      const response = await api.get("/helpfiles/search", {
+        params: { query },
+      });
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
     }
-  }
+  },
+};
+
+// UHF API functions
+export const uhfAPI = {
+  // Get all UHF readers
+  getUHFReaders: async (params = {}) => {
+    try {
+      const response = await api.get("/uhf-readers", { params });
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Get UHF reader by ID
+  getUHFReaderById: async (readerId) => {
+    try {
+      const response = await api.get(`/uhf-readers/${readerId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Get UHF reader by UHF ID
+  getUHFReaderByUHFId: async (uhfId) => {
+    try {
+      const response = await api.get(`/uhf-readers/uhf/${uhfId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Create UHF reader
+  createUHFReader: async (readerData) => {
+    try {
+      const response = await api.post("/uhf-readers", readerData);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Update UHF reader
+  updateUHFReader: async (readerId, readerData) => {
+    try {
+      const response = await api.put(`/uhf-readers/${readerId}`, readerData);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Delete UHF reader
+  deleteUHFReader: async (readerId) => {
+    try {
+      const response = await api.delete(`/uhf-readers/${readerId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Detect UHF tag
+  detectUHFTag: async (tagData) => {
+    try {
+      const response = await api.post("/uhf-tags/detect", tagData);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Get all notifications
+  getNotifications: async (params = {}) => {
+    try {
+      const response = await api.get("/notifications", { params });
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Mark notification as read
+  markNotificationAsRead: async (notificationId) => {
+    try {
+      const response = await api.put(`/notifications/${notificationId}/read`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Get inventory item by ID
+  getInventoryItem: async (itemId) => {
+    try {
+      const response = await api.get(`/inventory/${itemId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Get inventory item by tag ID
+  getInventoryItemByTagId: async (tagId) => {
+    try {
+      const response = await api.get(`/inventory/tag/${tagId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Update inventory item
+  updateInventoryItem: async (itemId, itemData) => {
+    try {
+      const response = await api.put(`/inventory/${itemId}`, itemData);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
 };
 
 // Audit Logs API functions
@@ -1153,6 +1453,50 @@ export const getStatusColor = (status) => {
   return statusColors[status.toLowerCase()] || "gray";
 };
 
+export const exportToCSV = (data, filename = "export.csv") => {
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    console.error("No data to export");
+    return;
+  }
+
+  // Get headers from the first item
+  const headers = Object.keys(data[0]);
+
+  // Filter out complex objects and arrays that can't be directly represented in CSV
+  const filteredHeaders = headers.filter((header) => {
+    const value = data[0][header];
+    return typeof value !== "object" || value === null;
+  });
+
+  // Create CSV header row
+  let csvContent = filteredHeaders.join(",") + "\n";
+
+  // Add data rows
+  data.forEach((item) => {
+    const row = filteredHeaders.map((header) => {
+      // Handle special cases (null, undefined, etc.)
+      const value = item[header];
+      if (value === null || value === undefined) return "";
+
+      // Convert to string and escape commas and quotes
+      const stringValue = String(value);
+      if (
+        stringValue.includes(",") ||
+        stringValue.includes('"') ||
+        stringValue.includes("\n")
+      ) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      return stringValue;
+    });
+    csvContent += row.join(",") + "\n";
+  });
+
+  // Create blob and download
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  downloadFile(blob, filename);
+};
+
 export const downloadFile = (blob, filename) => {
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -1172,29 +1516,29 @@ export const websocketAPI = {
   connect: (token, onConnect, onDisconnect) => {
     try {
       // Import socket.io-client dynamically to avoid SSR issues
-      const io = require('socket.io-client');
-      
+      const io = require("socket.io-client");
+
       // Connect to the UHF namespace with auth token
       websocketAPI.socket = io(`${API_BASE_URL}/uhf`, {
         auth: {
-          token
-        }
+          token,
+        },
       });
 
       // Setup event listeners
-      websocketAPI.socket.on('connect', () => {
-        console.log('Connected to WebSocket server');
+      websocketAPI.socket.on("connect", () => {
+        console.log("Connected to WebSocket server");
         if (onConnect) onConnect();
       });
 
-      websocketAPI.socket.on('disconnect', (reason) => {
-        console.log('Disconnected from WebSocket server:', reason);
+      websocketAPI.socket.on("disconnect", (reason) => {
+        console.log("Disconnected from WebSocket server:", reason);
         if (onDisconnect) onDisconnect(reason);
       });
 
       return websocketAPI.socket;
     } catch (error) {
-      console.error('WebSocket connection error:', error);
+      console.error("WebSocket connection error:", error);
       throw error;
     }
   },
@@ -1210,33 +1554,33 @@ export const websocketAPI = {
   // Subscribe to RFID tag read events
   onTagRead: (callback) => {
     if (websocketAPI.socket) {
-      websocketAPI.socket.on('tag_read', (data) => {
+      websocketAPI.socket.on("tag_read", (data) => {
         callback(data);
       });
     } else {
-      console.error('WebSocket not connected. Call connect() first.');
+      console.error("WebSocket not connected. Call connect() first.");
     }
   },
 
   // Subscribe to item movement events
   onItemMoved: (callback) => {
     if (websocketAPI.socket) {
-      websocketAPI.socket.on('item_moved', (data) => {
+      websocketAPI.socket.on("item_moved", (data) => {
         callback(data);
       });
     } else {
-      console.error('WebSocket not connected. Call connect() first.');
+      console.error("WebSocket not connected. Call connect() first.");
     }
   },
 
   // Subscribe to stock alert events
   onStockAlert: (callback) => {
     if (websocketAPI.socket) {
-      websocketAPI.socket.on('stock_alert', (data) => {
+      websocketAPI.socket.on("stock_alert", (data) => {
         callback(data);
       });
     } else {
-      console.error('WebSocket not connected. Call connect() first.');
+      console.error("WebSocket not connected. Call connect() first.");
     }
   },
 
@@ -1248,7 +1592,8 @@ export const websocketAPI = {
   },
 };
 
-export default {
+// Create a default export object
+const helpFunctions = {
   authAPI,
   userAPI,
   companyAPI,
@@ -1261,6 +1606,7 @@ export default {
   forecastingAPI,
   shipmentAPI,
   systemAPI,
+  uhfAPI,
   auditLogAPI,
   notificationAPI,
   helpfileAPI,
@@ -1270,3 +1616,5 @@ export default {
   getStatusColor,
   downloadFile,
 };
+
+export default helpFunctions;

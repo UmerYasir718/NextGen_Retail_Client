@@ -2,21 +2,36 @@ import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
 import DataTable from "react-data-table-component";
+import { toast } from "react-toastify";
+import shelfAPI from "../../utils/api/shelfAPI";
+import zoneAPI from "../../utils/api/zoneAPI";
+import warehouseAPI from "../../utils/api/warehouseAPI";
 
 const ShelfManagement = () => {
   const { user } = useSelector((state) => state.auth);
   const location = useLocation();
-  
+
   // Get zoneId from URL query params if available
   const queryParams = new URLSearchParams(location.search);
-  const zoneIdFromUrl = queryParams.get("zoneId") ? parseInt(queryParams.get("zoneId")) : null;
+  const zoneIdFromUrl = queryParams.get("zoneId")
+    ? parseInt(queryParams.get("zoneId"))
+    : null;
 
   const [filterText, setFilterText] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedShelf, setSelectedShelf] = useState(null);
   const [selectedZone, setSelectedZone] = useState(zoneIdFromUrl);
+  const [selectedWarehouse, setSelectedWarehouse] = useState(null);
   const [zones, setZones] = useState([]);
+  const [shelves, setShelves] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [warehouses, setWarehouses] = useState([]);
+
+  const [selectedCompany, setSelectedCompany] = useState(
+    user?.companyId ? { id: user.companyId } : null
+  );
 
   // Form state for new/edit shelf
   const [shelfForm, setShelfForm] = useState({
@@ -28,171 +43,85 @@ const ShelfManagement = () => {
     status: "active",
   });
 
-  // Sample data for shelves
-  const shelvesData = [
-    {
-      id: 1,
-      name: "Shelf A1",
-      description: "Electronics - Small Items",
-      zoneId: 1,
-      zoneName: "Zone A",
-      warehouseId: 1,
-      warehouseName: "Main Distribution Center",
-      type: "standard",
-      capacity: 100,
-      utilized: 65,
-      binCount: 4,
-      itemCount: 45,
-      status: "active",
-      lastUpdated: "2023-06-15",
-    },
-    {
-      id: 2,
-      name: "Shelf A2",
-      description: "Electronics - Medium Items",
-      zoneId: 1,
-      zoneName: "Zone A",
-      warehouseId: 1,
-      warehouseName: "Main Distribution Center",
-      type: "heavy-duty",
-      capacity: 150,
-      utilized: 120,
-      binCount: 6,
-      itemCount: 75,
-      status: "active",
-      lastUpdated: "2023-06-14",
-    },
-    {
-      id: 3,
-      name: "Shelf B1",
-      description: "Clothing - Tops",
-      zoneId: 2,
-      zoneName: "Zone B",
-      warehouseId: 1,
-      warehouseName: "Main Distribution Center",
-      type: "standard",
-      capacity: 80,
-      utilized: 45,
-      binCount: 8,
-      itemCount: 120,
-      status: "active",
-      lastUpdated: "2023-06-12",
-    },
-    {
-      id: 4,
-      name: "Shelf B2",
-      description: "Clothing - Bottoms",
-      zoneId: 2,
-      zoneName: "Zone B",
-      warehouseId: 1,
-      warehouseName: "Main Distribution Center",
-      type: "standard",
-      capacity: 80,
-      utilized: 60,
-      binCount: 8,
-      itemCount: 95,
-      status: "active",
-      lastUpdated: "2023-06-11",
-    },
-    {
-      id: 5,
-      name: "Shelf C1",
-      description: "Home Goods - Kitchen",
-      zoneId: 3,
-      zoneName: "Zone C",
-      warehouseId: 2,
-      warehouseName: "West Coast Facility",
-      type: "heavy-duty",
-      capacity: 200,
-      utilized: 180,
-      binCount: 10,
-      itemCount: 65,
-      status: "active",
-      lastUpdated: "2023-06-10",
-    },
-    {
-      id: 6,
-      name: "Shelf D1",
-      description: "Under maintenance",
-      zoneId: 4,
-      zoneName: "Zone D",
-      warehouseId: 2,
-      warehouseName: "West Coast Facility",
-      type: "standard",
-      capacity: 100,
-      utilized: 0,
-      binCount: 0,
-      itemCount: 0,
-      status: "maintenance",
-      lastUpdated: "2023-06-18",
-    },
-  ];
-
-  // Sample data for zones
-  const zonesData = [
-    {
-      id: 1,
-      name: "Zone A",
-      warehouseId: 1,
-      warehouseName: "Main Distribution Center",
-    },
-    {
-      id: 2,
-      name: "Zone B",
-      warehouseId: 1,
-      warehouseName: "Main Distribution Center",
-    },
-    {
-      id: 3,
-      name: "Zone C",
-      warehouseId: 2,
-      warehouseName: "West Coast Facility",
-    },
-    {
-      id: 4,
-      name: "Zone D",
-      warehouseId: 2,
-      warehouseName: "West Coast Facility",
-    },
-    {
-      id: 5,
-      name: "Zone E",
-      warehouseId: 3,
-      warehouseName: "Central Storage",
-    },
-  ];
-
-  // Load zones on component mount
+  // Fetch zones and shelves data from backend
   useEffect(() => {
-    // In a real app, this would be an API call
-    setZones(zonesData);
-    
-    // If zoneId is provided in URL, set it as selected
-    if (zoneIdFromUrl) {
-      setSelectedZone(zoneIdFromUrl);
-      setShelfForm(prev => ({
-        ...prev,
-        zoneId: zoneIdFromUrl.toString()
-      }));
-    }
-  }, [zoneIdFromUrl]);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  // Filter data based on search input and selected zone
-  const filteredData = shelvesData.filter((item) => {
-    // Filter by zone if one is selected
-    if (selectedZone && item.zoneId !== selectedZone) {
-      return false;
-    }
+        // Fetch warehouses data
+        const companyId = selectedCompany?.id;
+        const warehousesResponse = await warehouseAPI.getWarehouses(companyId);
+        const warehousesData =
+          warehousesResponse && warehousesResponse.data
+            ? warehousesResponse.data
+            : [];
+        setWarehouses(Array.isArray(warehousesData) ? warehousesData : []);
 
-    // Then filter by search text
+        // Fetch zones data
+        const zonesResponse = await zoneAPI.getZones();
+        const zonesData =
+          zonesResponse && zonesResponse.data ? zonesResponse.data : [];
+        setZones(Array.isArray(zonesData) ? zonesData : []);
+
+        // Fetch shelves data based on selected zone or all shelves
+        let shelvesResponse;
+        if (selectedZone) {
+          shelvesResponse = await shelfAPI.getShelves(selectedZone);
+        } else {
+          shelvesResponse = await shelfAPI.getShelves();
+        }
+
+        // Handle API response correctly
+        const shelvesData =
+          shelvesResponse && shelvesResponse.data ? shelvesResponse.data : [];
+        setShelves(Array.isArray(shelvesData) ? shelvesData : []);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError("Failed to load data. Please try again.");
+        toast.error("Failed to load data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [selectedZone]);
+
+  // Filtered shelves based on search text
+  const filteredShelves = shelves.filter((shelf) => {
+    // Filter by search text
     const searchText = filterText.toLowerCase();
     return (
-      (item.name && item.name.toLowerCase().includes(searchText)) ||
-      (item.description && item.description.toLowerCase().includes(searchText)) ||
-      (item.type && item.type.toLowerCase().includes(searchText)) ||
-      (item.zoneName && item.zoneName.toLowerCase().includes(searchText))
+      (shelf.name && shelf.name.toLowerCase().includes(searchText)) ||
+      (shelf.description &&
+        shelf.description.toLowerCase().includes(searchText)) ||
+      (shelf.type && shelf.type.toLowerCase().includes(searchText)) ||
+      (shelf.zoneName && shelf.zoneName.toLowerCase().includes(searchText))
     );
   });
+
+  // Calculate statistics
+  const totalShelves = filteredShelves.length;
+  const activeShelves = filteredShelves.filter(
+    (shelf) => shelf.isActive === true
+  ).length;
+  const totalCapacity = filteredShelves.reduce(
+    (sum, shelf) => sum + (parseInt(shelf.utilization.capacityValue) || 0),
+    0
+  );
+  const totalUtilized = filteredShelves.reduce(
+    (sum, shelf) =>
+      sum + (parseInt(shelf.utilization.utilizationPercentage) || 0),
+    0
+  );
+  const utilizationPercentage =
+    totalCapacity > 0 ? Math.round((totalUtilized / totalCapacity) * 100) : 0;
+  const totalBins = filteredShelves.reduce(
+    (sum, shelf) => sum + (shelf.utilization.binCount || 0),
+    0
+  );
 
   // Handle form input changes
   const handleInputChange = (e) => {
@@ -203,21 +132,57 @@ const ShelfManagement = () => {
     });
   };
 
+  const findWareHouseById = (id) => {
+    if (!id) return null;
+    return warehouses.find((warehouse) => warehouse._id === id)?.name;
+  };
+
   // Handle form submission for new shelf
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // In a real app, this would be an API call to create a new shelf
-    console.log("Creating new shelf:", shelfForm);
-    setShowAddModal(false);
-    // Reset form but keep selected zone
-    setShelfForm({
-      name: "",
-      description: "",
-      zoneId: selectedZone ? selectedZone.toString() : "",
-      type: "standard",
-      capacity: 100,
-      status: "active",
-    });
+    try {
+      setLoading(true);
+      const zoneId = parseInt(shelfForm.zoneId);
+
+      // Create payload for API
+      const shelfData = {
+        name: shelfForm.name,
+        description: shelfForm.description,
+        type: shelfForm.type,
+        capacity: parseInt(shelfForm.capacity),
+        status: shelfForm.status,
+      };
+
+      // API call to create shelf
+      await shelfAPI.createShelf(zoneId, shelfData);
+
+      // Refresh shelves data
+      const shelvesResponse = selectedZone
+        ? await shelfAPI.getShelves(selectedZone)
+        : await shelfAPI.getShelves();
+
+      // Handle API response correctly
+      const shelvesData =
+        shelvesResponse && shelvesResponse.data ? shelvesResponse.data : [];
+      setShelves(Array.isArray(shelvesData) ? shelvesData : []);
+      toast.success("Shelf created successfully");
+
+      // Reset form and close modal
+      setShelfForm({
+        name: "",
+        description: "",
+        zoneId: selectedZone ? selectedZone.toString() : "",
+        type: "standard",
+        capacity: 100,
+        status: "active",
+      });
+      setShowAddModal(false);
+    } catch (err) {
+      console.error("Error creating shelf:", err);
+      toast.error("Failed to create shelf");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle edit shelf
@@ -235,18 +200,69 @@ const ShelfManagement = () => {
   };
 
   // Handle update shelf
-  const handleUpdate = (e) => {
+  const handleUpdate = async (e) => {
     e.preventDefault();
-    // In a real app, this would be an API call to update the shelf
-    console.log("Updating shelf:", selectedShelf.id, shelfForm);
-    setShowEditModal(false);
+    try {
+      setLoading(true);
+
+      // Create payload for API
+      const shelfData = {
+        name: shelfForm.name,
+        description: shelfForm.description,
+        zoneId: parseInt(shelfForm.zoneId),
+        type: shelfForm.type,
+        capacity: parseInt(shelfForm.capacity),
+        status: shelfForm.status,
+      };
+
+      // API call to update shelf
+      await shelfAPI.updateShelf(selectedShelf.id, shelfData);
+
+      // Refresh shelves data
+      const shelvesResponse = selectedZone
+        ? await shelfAPI.getShelves(selectedZone)
+        : await shelfAPI.getShelves();
+
+      // Handle API response correctly
+      const shelvesData =
+        shelvesResponse && shelvesResponse.data ? shelvesResponse.data : [];
+      setShelves(Array.isArray(shelvesData) ? shelvesData : []);
+      toast.success("Shelf updated successfully");
+
+      // Close modal
+      setShowEditModal(false);
+    } catch (err) {
+      console.error("Error updating shelf:", err);
+      toast.error("Failed to update shelf");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle delete shelf
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this shelf?")) {
-      // In a real app, this would be an API call to delete the shelf
-      console.log("Deleting shelf:", id);
+      try {
+        setLoading(true);
+
+        // API call to delete shelf
+        await shelfAPI.deleteShelf(id);
+
+        // Refresh shelves data
+        const shelvesResponse = selectedZone
+          ? await shelfAPI.getShelves(selectedZone)
+          : await shelfAPI.getShelves();
+
+        setShelves(
+          Array.isArray(shelvesResponse.data) ? shelvesResponse.data : []
+        );
+        toast.success("Shelf deleted successfully");
+      } catch (err) {
+        console.error("Error deleting shelf:", err);
+        toast.error("Failed to delete shelf");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -255,62 +271,70 @@ const ShelfManagement = () => {
     const zoneId = e.target.value ? parseInt(e.target.value) : null;
     setSelectedZone(zoneId);
   };
-
+  const findZoneById = (id) => {
+    if (!id) return null;
+    return zones.find((zone) => zone._id === id)?.name;
+  };
   // Table columns
   const columns = [
     { name: "Shelf Name", selector: (row) => row.name, sortable: true },
-    { name: "Zone", selector: (row) => row.zoneName, sortable: true },
+    {
+      name: "Zone",
+      selector: (row) => findZoneById(row.zoneId),
+      sortable: true,
+    },
     { name: "Type", selector: (row) => row.type, sortable: true },
     {
       name: "Capacity",
-      selector: (row) => `${row.utilized}/${row.capacity}`,
+      selector: (row) => row.utilization.capacityValue,
+      sortable: true,
+    },
+    {
+      name: "Utilization",
+      selector: (row) => row.utilization.utilizationPercentage,
       sortable: true,
       cell: (row) => {
-        const utilizationPercent = Math.round((row.utilized / row.capacity) * 100);
+        const utilizationPercent = Math.round(
+          (row.utilization.utilizationPercentage /
+            row.utilization.capacityValue) *
+            100
+        );
         return (
           <div className="w-full">
-            <div className="flex justify-between text-xs mb-1">
-              <span>{row.utilized}/{row.capacity}</span>
-              <span>{utilizationPercent}%</span>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium">{utilizationPercent}%</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2.5">
-              <div 
-                className={`h-2.5 rounded-full ${
-                  utilizationPercent > 90 ? 'bg-red-500' : 
-                  utilizationPercent > 70 ? 'bg-yellow-500' : 'bg-green-500'
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className={`h-2 rounded-full ${
+                  utilizationPercent > 90
+                    ? "bg-red-500"
+                    : utilizationPercent > 70
+                    ? "bg-yellow-500"
+                    : "bg-green-500"
                 }`}
                 style={{ width: `${utilizationPercent}%` }}
               ></div>
             </div>
           </div>
         );
-      }
+      },
     },
     {
       name: "Status",
-      selector: (row) => row.status,
+      selector: (row) => row.isActive,
       sortable: true,
       cell: (row) => (
         <span
           className={`px-2 py-1 rounded-full text-xs ${
-            row.status === "active"
+            row.isActive === true
               ? "bg-green-100 text-green-800"
               : "bg-yellow-100 text-yellow-800"
           }`}
         >
-          {row.status}
+          {row.isActive === true ? "Active" : "Inactive"}
         </span>
       ),
-    },
-    {
-      name: "Bins",
-      selector: (row) => row.binCount,
-      sortable: true,
-    },
-    {
-      name: "Items",
-      selector: (row) => row.itemCount,
-      sortable: true,
     },
     {
       name: "Actions",
@@ -330,28 +354,21 @@ const ShelfManagement = () => {
           >
             🗑️
           </button>
-          <button
-            onClick={() => window.location.href = `/warehouse/bins?shelfId=${row.id}`}
-            className="p-1 text-green-600 hover:text-green-800"
-            title="View Bins"
-          >
-            🔍
-          </button>
         </div>
       ),
     },
   ];
 
   // Get selected zone details
-  const selectedZoneDetails = zones.find(z => z.id === selectedZone);
+  const selectedZoneDetails = zones.find((z) => z.id === selectedZone);
 
   return (
     <div className="container-fluid mx-auto px-4 py-6">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800">
-          {selectedZoneDetails 
-            ? `Shelves in ${selectedZoneDetails.name}` 
+          {selectedZoneDetails
+            ? `Shelves in ${selectedZoneDetails.name}`
             : "Shelf Management"}
         </h1>
         <p className="text-gray-600">
@@ -387,7 +404,7 @@ const ShelfManagement = () => {
           />
         </div>
         <button
-          className="btn btn-primary"
+          className="btn btn-primary w-full md:w-auto"
           onClick={() => setShowAddModal(true)}
         >
           Add New Shelf
@@ -400,9 +417,7 @@ const ShelfManagement = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Shelves</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {filteredData.length}
-              </p>
+              <p className="text-2xl font-bold text-gray-900">{totalShelves}</p>
             </div>
             <div className="p-3 rounded-full bg-blue-100 text-blue-500">📚</div>
           </div>
@@ -411,9 +426,11 @@ const ShelfManagement = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Active Shelves</p>
+              <p className="text-sm font-medium text-gray-600">
+                Active Shelves
+              </p>
               <p className="text-2xl font-bold text-gray-900">
-                {filteredData.filter((s) => s.status === "active").length}
+                {activeShelves}
               </p>
             </div>
             <div className="p-3 rounded-full bg-green-100 text-green-500">
@@ -425,32 +442,9 @@ const ShelfManagement = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Bins</p>
+              <p className="text-sm font-medium text-gray-600">Utilization</p>
               <p className="text-2xl font-bold text-gray-900">
-                {filteredData.reduce((sum, shelf) => sum + shelf.binCount, 0)}
-              </p>
-            </div>
-            <div className="p-3 rounded-full bg-purple-100 text-purple-500">
-              📦
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Avg. Utilization</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {filteredData.length > 0 
-                  ? Math.round(
-                      (filteredData.reduce(
-                        (sum, shelf) => sum + (shelf.utilized / shelf.capacity),
-                        0
-                      ) /
-                        filteredData.length) *
-                        100
-                    )
-                  : 0}%
+                {utilizationPercentage}%
               </p>
             </div>
             <div className="p-3 rounded-full bg-yellow-100 text-yellow-500">
@@ -458,22 +452,41 @@ const ShelfManagement = () => {
             </div>
           </div>
         </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Bins</p>
+              <p className="text-2xl font-bold text-gray-900">{totalBins}</p>
+            </div>
+            <div className="p-3 rounded-full bg-purple-100 text-purple-500">
+              📦
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Data Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
+        {error && (
+          <div className="p-4 bg-red-100 text-red-700 border-l-4 border-red-500">
+            {error}
+          </div>
+        )}
         <DataTable
           columns={columns}
-          data={filteredData}
+          data={filteredShelves}
           pagination
           responsive
           highlightOnHover
           striped
+          progressPending={loading}
+          progressComponent={<div className="p-4">Loading...</div>}
           subHeader
           subHeaderComponent={
             <div className="w-full text-right py-2">
               <span className="text-sm text-gray-600">
-                {filteredData.length} shelves found
+                {filteredShelves.length} shelves found
               </span>
             </div>
           }
@@ -482,10 +495,18 @@ const ShelfManagement = () => {
 
       {/* Add Shelf Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-            <div className="p-6">
-              <h2 className="text-xl font-bold mb-4">Add New Shelf</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Add New Shelf</h2>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={() => setShowAddModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[70vh]">
               <form onSubmit={handleSubmit}>
                 <div className="space-y-4">
                   <div>
@@ -506,7 +527,7 @@ const ShelfManagement = () => {
                       <option value="">Select Zone</option>
                       {zones.map((zone) => (
                         <option key={zone.id} value={zone.id}>
-                          {zone.name} ({zone.warehouseName})
+                          {zone.name} ({findWareHouseById(zone.warehouseId)})
                         </option>
                       ))}
                     </select>
@@ -626,11 +647,19 @@ const ShelfManagement = () => {
       )}
 
       {/* Edit Shelf Modal */}
-      {showEditModal && selectedShelf && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-            <div className="p-6">
-              <h2 className="text-xl font-bold mb-4">Edit Shelf</h2>
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Edit Shelf</h2>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={() => setShowEditModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[70vh]">
               <form onSubmit={handleUpdate}>
                 <div className="space-y-4">
                   <div>
@@ -650,8 +679,8 @@ const ShelfManagement = () => {
                     >
                       <option value="">Select Zone</option>
                       {zones.map((zone) => (
-                        <option key={zone.id} value={zone.id}>
-                          {zone.name} ({zone.warehouseName})
+                        <option key={zone._id} value={zone._id}>
+                          {zone.name} ({findWareHouseById(zone.warehouseId)})
                         </option>
                       ))}
                     </select>
