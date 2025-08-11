@@ -94,10 +94,10 @@ const ForecastingManagement = () => {
 
   // Filter data based on search input and user's company (if not super_admin)
   const filteredData = forecastingFilesData.filter((item) => {
-    // First filter by company if user is not super_admin
-    if (user.role !== "super_admin" && user.companyId !== item.companyId) {
-      return false;
-    }
+    // // First filter by company if user is not super_admin
+    // if (user.role !== "super_admin" && user.companyId !== item.companyId) {
+    //   return false;
+    // }
 
     // Then filter by search text
     const searchText = filterText.toLowerCase();

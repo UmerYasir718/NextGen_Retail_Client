@@ -1,17 +1,25 @@
 import React, { useState, useEffect } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { logout } from "../redux/slices/authSlice";
+import { logout, refreshCurrentPlan } from "../redux/slices/authSlice";
 import { selectCompany } from "../redux/slices/companySlice";
-import Chatbot from "../components/Chatbot";
+import { toast } from "react-toastify";
+import companyAPI from "../utils/api/companyAPI";
+import ChatbotToggle from "../components/ChatbotToggle";
+import NotificationPanel from "../components/NotificationPanel";
+import NotificationBell from "../components/notifications/NotificationBell";
 import Logo from "../assets/Logo_new.png";
 import PasswordUpdateModal from "../components/PasswordUpdateModal";
+import PlanBanner from "../components/PlanBanner";
+import { usePlan } from "../utils/hooks/usePlan";
 import {
   FaChevronDown,
   FaChevronRight,
   FaUser,
   FaKey,
   FaSignOutAlt,
+  FaCrown,
+  FaExclamationTriangle,
 } from "react-icons/fa";
 
 // Icons (using emoji as placeholders, you can replace with actual icons)
@@ -25,7 +33,7 @@ const icons = {
   planView: "👁️",
   user: "👥",
   company: "🏭",
-  system: "⚙️",
+
   warehouse: "🏪",
   zone: "📍",
   shelf: "📦",
@@ -35,7 +43,9 @@ const icons = {
   shipment: "🚚",
   audit: "📋",
   uhf: "📡",
+  stripe: "💳",
   chatbot: "💬",
+  notifications: "🔔",
   logout: "🚪",
 };
 
@@ -44,6 +54,7 @@ const MainLayout = () => {
   const location = useLocation();
   const { user } = useSelector((state) => state.auth);
   const { companies, selectedCompany } = useSelector((state) => state.company);
+  const { plan, isPlanExpired, isTrial, getTrialDaysRemaining } = usePlan();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -91,10 +102,40 @@ const MainLayout = () => {
     localStorage.removeItem("user");
   };
 
-  const handleCompanyChange = (e) => {
-    const companyId = parseInt(e.target.value);
-    const company = companies.find((c) => c.id === companyId);
-    dispatch(selectCompany(company));
+  const handleCompanyChange = async (e) => {
+    const companyId = e.target.value;
+    if (!companyId) {
+      dispatch(selectCompany(null));
+      return;
+    }
+
+    const company = companies.find((c) => c._id === companyId);
+    if (company) {
+      try {
+        // Switch to the selected company's token
+        const response = await companyAPI.switchCompanyToken(companyId);
+        if (response.success) {
+          // Store the new token
+          localStorage.setItem("accessToken", response.token);
+          // Update the selected company in Redux
+          dispatch(selectCompany(company));
+          toast.success(`Switched to ${company.name}`);
+
+          // Refresh plan data for the new company
+          try {
+            await dispatch(refreshCurrentPlan());
+          } catch (error) {
+            console.error("Error refreshing plan after company switch:", error);
+          }
+
+          // Reload the page to apply the new token
+          window.location.reload();
+        }
+      } catch (error) {
+        console.error("Failed to switch company token:", error);
+        toast.error("Failed to switch company");
+      }
+    }
   };
 
   // Toggle group expansion
@@ -159,6 +200,11 @@ const MainLayout = () => {
             name: "Sale Inventory",
             icon: icons.sale,
           },
+          {
+            path: "/low-stock-notifications",
+            name: "Low Stock Alerts",
+            icon: "⚠️",
+          },
         ],
       },
 
@@ -195,7 +241,7 @@ const MainLayout = () => {
         items: [
           {
             path: "/forecasting-management",
-            name: "Forecasting",
+            name: "Sale Forecasting",
             icon: icons.forecasting,
           },
           {
@@ -233,6 +279,11 @@ const MainLayout = () => {
             icon: icons.planView,
           },
           {
+            path: "/current-plan",
+            name: "Current Plan",
+            icon: "📋",
+          },
+          {
             path: "/user-management",
             name: "User Management",
             icon: icons.user,
@@ -243,19 +294,9 @@ const MainLayout = () => {
             icon: icons.company,
           },
           {
-            path: "/system-management",
-            name: "System Management",
-            icon: icons.system,
-          },
-          {
-            path: "/audit-logs",
-            name: "Audit Logs",
-            icon: icons.audit,
-          },
-          {
-            path: "/uhf-management",
-            name: "UHF Management",
-            icon: icons.uhf,
+            path: "/stripe-transactions",
+            name: "Stripe Transactions",
+            icon: icons.stripe,
           },
         ],
       },
@@ -263,37 +304,33 @@ const MainLayout = () => {
 
     // Define route permissions based on App.js routes
     const routePermissions = {
-      "/dashboard": ["super_admin", "company_admin", "company_user"],
+      "/dashboard": ["company_admin", "company_user"],
       "/admin-dashboard": ["super_admin"],
-      "/purchase-inventory": ["super_admin", "company_admin", "company_user"],
-      "/pending-sale-inventory": [
-        "super_admin",
-        "company_admin",
-        "company_user",
-      ],
-      "/sale-inventory": ["super_admin", "company_admin", "company_user"],
+      "/purchase-inventory": ["company_admin", "company_user"],
+      "/pending-sale-inventory": ["company_admin", "company_user"],
+      "/sale-inventory": ["company_admin", "company_user"],
       "/plan-management": ["super_admin"],
       "/plans": ["company_admin"],
+      "/current-plan": ["company_admin", "company_user"],
       "/user-management": ["super_admin", "company_admin"],
       "/company-management": ["super_admin"],
-      "/system-management": ["super_admin", "company_admin"],
-      "/audit-logs": ["super_admin", "company_admin", "auditor"],
-      "/uhf-management": ["super_admin", "company_admin", "store_manager"],
-      "/warehouse-management": ["super_admin", "company_admin", "company_user"],
-      "/zone-management": ["super_admin", "company_admin", "company_user"],
-      "/shelf-management": ["super_admin", "company_admin", "company_user"],
-      "/bin-management": ["super_admin", "company_admin", "company_user"],
-      "/forecasting-management": [
-        "super_admin",
-        "company_admin",
-        "company_user",
-      ],
-      "/forecasting-dashboard": [
-        "super_admin",
-        "company_admin",
-        "company_user",
-      ],
-      "/shipment-management": ["super_admin", "company_admin", "company_user"],
+      "/stripe-transactions": ["super_admin"],
+
+      "/audit-logs": ["company_admin", "auditor"],
+      "/uhf-management": ["company_admin", "store_manager"],
+      // "/notification-demo": [
+      //   "super_admin",
+      //   "company_admin",
+      //   "auditor",
+      //   "store_manager",
+      //   "analyst",
+      // ],
+      "/warehouse-management": ["company_admin", "company_user"],
+      "/zone-management": ["company_admin", "company_user"],
+      "/shelf-management": ["company_admin", "company_user"],
+      "/bin-management": ["company_admin", "company_user"],
+      "/forecasting-management": ["company_admin", "company_user"],
+      "/forecasting-dashboard": ["company_admin", "company_user"],
     };
 
     // Filter nav items based on user role
@@ -421,6 +458,9 @@ const MainLayout = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
+        {/* Plan Banner */}
+        <PlanBanner />
+
         {/* Logo Watermark */}
         {/* <div className="absolute opacity-5 pointer-events-none w-full h-full flex items-center justify-center">
           <img src={Logo} alt="" className="w-1/3 max-w-xxl" />
@@ -428,77 +468,148 @@ const MainLayout = () => {
         {/* Top Navbar */}
         <header className="bg-white shadow-sm z-10">
           <div className="flex items-center justify-between p-4">
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="md:hidden text-gray-600 focus:outline-none"
-            >
-              ☰
-            </button>
-
-            {/* Company Selector (for super admin) */}
-            {user && user.role === "super_admin" && (
-              <div className="flex-1 max-w-xs mx-4">
-                <select
-                  className="form-input bg-gray-50"
-                  value={selectedCompany ? selectedCompany.id : ""}
-                  onChange={handleCompanyChange}
-                >
-                  <option value="">Select Company</option>
-                  {companies.map((company) => (
-                    <option key={company.id} value={company.id}>
-                      {company.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* User Profile */}
-            <div className="flex items-center space-x-3 relative user-profile-dropdown">
-              <div className="hidden md:block text-right">
-                <p className="text-sm font-medium text-gray-700">
-                  {user?.name}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {user?.role.replace("_", " ")?.split(" ")[0]?.toUpperCase()}
-                </p>
-              </div>
-              <div
-                className="h-10 w-10 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center cursor-pointer"
-                onClick={() => setShowUserDropdown(!showUserDropdown)}
+            {/* Left Side - Mobile Menu & Company Selector */}
+            <div className="flex items-center space-x-4">
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="md:hidden text-gray-600 focus:outline-none"
               >
-                <span className="text-white font-medium text-sm">
-                  {user?.name?.charAt(0)?.toUpperCase()}
-                </span>
-              </div>
+                ☰
+              </button>
 
-              {/* User Dropdown */}
-              {showUserDropdown && (
-                <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
-                  <div className="px-4 py-2 text-sm text-gray-700 border-b">
-                    <p className="font-medium">{user?.name}</p>
-                    <p className="text-gray-500">{user?.email}</p>
-                  </div>
-                  <button
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                    onClick={() => {
-                      setShowPasswordModal(true);
-                      setShowUserDropdown(false);
-                    }}
+              {/* Company Selector (for super admin) */}
+              {user && user.role === "super_admin" && (
+                <div className="max-w-xs">
+                  <select
+                    className="form-input bg-gray-50"
+                    value={selectedCompany ? selectedCompany._id : ""}
+                    onChange={handleCompanyChange}
                   >
-                    <FaKey className="mr-2" />
-                    Change Password
-                  </button>
-                  <button
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                    onClick={handleLogout}
-                  >
-                    <FaSignOutAlt className="mr-2" />
-                    Logout
-                  </button>
+                    <option value="">Select Company</option>
+                    {/* Show selected company first if exists */}
+                    {selectedCompany && (
+                      <option
+                        value={selectedCompany._id}
+                        className="font-semibold"
+                      >
+                        🏢 {selectedCompany.name} (Current)
+                      </option>
+                    )}
+                    {/* Show other companies */}
+                    {companies
+                      .filter(
+                        (company) =>
+                          !selectedCompany ||
+                          company._id !== selectedCompany._id
+                      )
+                      .map((company) => (
+                        <option key={company._id} value={company._id}>
+                          {company.name}
+                        </option>
+                      ))}
+                  </select>
                 </div>
               )}
+            </div>
+
+            {/* Right Side - Plan Status, Notifications & User Profile */}
+            <div className="flex items-center space-x-4">
+              {/* Plan Status Badge */}
+              {plan && user?.role !== "super_admin" && (
+                <div className="flex items-center space-x-3">
+                  <div
+                    className={`px-3 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${
+                      isPlanExpired
+                        ? "bg-red-100 text-red-700 border border-red-200"
+                        : isTrial()
+                        ? "bg-orange-100 text-orange-700 border border-orange-200"
+                        : "bg-green-100 text-green-700 border border-green-200"
+                    }`}
+                  >
+                    {isPlanExpired ? (
+                      <FaExclamationTriangle className="text-xs" />
+                    ) : isTrial() ? (
+                      <FaCrown className="text-xs" />
+                    ) : (
+                      <FaCrown className="text-xs" />
+                    )}
+                    <span className="hidden sm:inline">
+                      {isPlanExpired
+                        ? "Expired"
+                        : isTrial()
+                        ? `Trial (${getTrialDaysRemaining()}d)`
+                        : plan.name}
+                    </span>
+                    <span className="sm:hidden">
+                      {isPlanExpired
+                        ? "Exp"
+                        : isTrial()
+                        ? `${getTrialDaysRemaining()}d`
+                        : plan.name?.split(" ")[0]}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Notification Panel */}
+              <NotificationPanel />
+
+              {/* Notification Bell */}
+              <NotificationBell />
+
+              {/* User Profile */}
+              <div className="flex items-center space-x-3 relative user-profile-dropdown">
+                <div className="hidden md:block text-right">
+                  <p className="text-sm font-medium text-gray-700">
+                    {user?.name}
+                  </p>
+                  <p className="text-xs text-gray-500 capitalize">
+                    {user?.role
+                      .replace("_", " ")
+                      .split(" ")
+                      .map(
+                        (word) => word.charAt(0).toUpperCase() + word.slice(1)
+                      )
+                      .join(" ")}
+                  </p>
+                </div>
+                <div
+                  className="h-10 w-10 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center cursor-pointer"
+                  onClick={() => setShowUserDropdown(!showUserDropdown)}
+                >
+                  <span className="text-white font-medium text-sm">
+                    {user?.name?.charAt(0)?.toUpperCase()}
+                  </span>
+                </div>
+
+                {/* User Dropdown */}
+                {showUserDropdown && (
+                  <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                    <div className="px-4 py-2 text-sm text-gray-700 border-b">
+                      <p className="font-medium">{user?.name}</p>
+                      <p className="text-gray-500">{user?.email}</p>
+                    </div>
+                    <button
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                      onClick={() => {
+                        setShowPasswordModal(true);
+                        setShowUserDropdown(false);
+                      }}
+                    >
+                      <FaKey className="mr-2" />
+                      Change Password
+                    </button>
+                    <button
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                      onClick={handleLogout}
+                    >
+                      <FaSignOutAlt className="mr-2" />
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </header>
@@ -508,8 +619,8 @@ const MainLayout = () => {
           <Outlet />
         </main>
 
-        {/* Chatbot Component */}
-        <Chatbot />
+        {/* Chatbot Toggle Component */}
+        <ChatbotToggle />
 
         {/* Password Update Modal */}
         <PasswordUpdateModal

@@ -1,26 +1,29 @@
 import React, { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import planAPI from "../../utils/api/planAPI";
+import AddPlanModal from "../../components/plans/AddPlanModal";
+import { refreshCurrentPlan } from "../../redux/slices/authSlice";
 
 const PlanView = () => {
   const { planId } = useParams();
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
+  const isSuperAdmin = user?.role === "super_admin";
 
-  // State for plan data
   const [plan, setPlan] = useState(null);
   const [allPlans, setAllPlans] = useState([]);
+  const [companiesUsing, setCompaniesUsing] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [companiesUsing, setCompaniesUsing] = useState([]);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
 
   // Check if user is viewing a specific plan or catalog
   const isViewingCatalog = !planId;
   const isCompanyAdmin = user?.role === "company_admin";
-  const isSuperAdmin = user?.role === "super_admin";
 
   // Handle plan purchase with Stripe checkout
   const handlePurchasePlan = async (selectedPlan) => {
@@ -47,6 +50,62 @@ const PlanView = () => {
     }
   };
 
+  // Handle duplicate plan
+  const handleDuplicatePlan = async (duplicateData) => {
+    try {
+      setLoading(true);
+      const response = await planAPI.createPlan(duplicateData);
+
+      if (response?.success) {
+        toast.success("Plan duplicated successfully!");
+        setShowDuplicateModal(false);
+        // Navigate to the new plan
+        navigate(`/plans/${response.data._id}`);
+      } else {
+        toast.error(response?.message || "Failed to duplicate plan");
+      }
+    } catch (error) {
+      console.error("Error duplicating plan:", error);
+      toast.error(
+        "Error duplicating plan: " + (error.message || "Unknown error")
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle activate/deactivate plan
+  const handleTogglePlanStatus = async () => {
+    if (!plan?._id) {
+      toast.error("Plan ID not found");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await planAPI.updatePlan(plan._id, {
+        isActive: !plan.isActive,
+      });
+
+      if (response?.success) {
+        const newStatus = !plan.isActive;
+        setPlan((prev) => ({ ...prev, isActive: newStatus }));
+        toast.success(
+          `Plan ${newStatus ? "activated" : "deactivated"} successfully!`
+        );
+      } else {
+        toast.error(response?.message || "Failed to update plan status");
+      }
+    } catch (error) {
+      console.error("Error updating plan status:", error);
+      toast.error(
+        "Error updating plan status: " + (error.message || "Unknown error")
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Redirect if user is not authorized
   useEffect(() => {
     if (
@@ -69,6 +128,15 @@ const PlanView = () => {
     const fetchPlanData = async () => {
       try {
         setLoading(true);
+
+        // Refresh current plan data for the user
+        if (user?.role !== "super_admin") {
+          try {
+            await dispatch(refreshCurrentPlan());
+          } catch (error) {
+            console.error("Error refreshing current plan:", error);
+          }
+        }
 
         if (isViewingCatalog || isCompanyAdmin) {
           // Fetch all plans for catalog view
@@ -119,7 +187,7 @@ const PlanView = () => {
     };
 
     fetchPlanData();
-  }, [planId, isViewingCatalog, isCompanyAdmin]);
+  }, [planId, isViewingCatalog, isCompanyAdmin, dispatch, user?.role]);
 
   // If loading, show loading state
   if (loading) {
@@ -355,9 +423,7 @@ const PlanView = () => {
                       <button
                         className="flex-1 py-2 px-4 bg-gray-200 text-gray-800 font-medium rounded-md hover:bg-gray-300 transition duration-200"
                         onClick={() =>
-                          toast.info(
-                            `Edit functionality for ${plan.name} will be implemented soon!`
-                          )
+                          navigate(`/plan-management?edit=${plan._id}`)
                         }
                       >
                         Edit
@@ -587,25 +653,51 @@ const PlanView = () => {
         <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
           <button
             className="btn btn-secondary"
-            onClick={() =>
-              toast.info("Duplicate functionality will be implemented soon!")
-            }
+            onClick={() => setShowDuplicateModal(true)}
           >
             Duplicate Plan
           </button>
           <button
             className={`btn ${plan.isActive ? "btn-danger" : "btn-success"}`}
-            onClick={() =>
-              toast.info(
-                `${
-                  plan.isActive ? "Deactivate" : "Activate"
-                } functionality will be implemented soon!`
-              )
-            }
+            onClick={handleTogglePlanStatus}
+            disabled={loading}
           >
-            {plan.isActive ? "Deactivate Plan" : "Activate Plan"}
+            {loading
+              ? "Processing..."
+              : plan.isActive
+              ? "Deactivate Plan"
+              : "Activate Plan"}
           </button>
         </div>
+      )}
+
+      {/* Duplicate Plan Modal */}
+      {showDuplicateModal && plan && (
+        <AddPlanModal
+          isOpen={showDuplicateModal}
+          onClose={() => setShowDuplicateModal(false)}
+          onPlanAdded={handleDuplicatePlan}
+          initialData={{
+            name: `${plan.name} (Copy)`,
+            description: plan.description,
+            duration: plan.duration,
+            price: plan.price,
+            features: plan.features || [],
+            stripePriceId: plan.stripePriceId || "",
+            limits: {
+              warehouseLimit: plan.limits?.warehouseLimit || 1,
+              userLimit: plan.limits?.userLimit || 1,
+              inventoryLimit: plan.limits?.inventoryLimit || 1000,
+              includesAIForecasting:
+                plan.limits?.includesAIForecasting || false,
+              includesAdvancedReporting:
+                plan.limits?.includesAdvancedReporting || false,
+            },
+            isActive: false, // New duplicated plans start as inactive
+          }}
+          mode="duplicate"
+          submitButtonText="Duplicate Plan"
+        />
       )}
     </div>
   );

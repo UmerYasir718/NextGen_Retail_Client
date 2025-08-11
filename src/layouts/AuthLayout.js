@@ -56,17 +56,7 @@ const AuthLayout = () => {
         >
           <img src={Logo} alt="NextGen Retail" className="h-32 mx-auto mb-0" />
           <hr className="border-dark" />
-          {/* <p className="text-blue-200 text-xl font-semibold">
-            Advanced Inventory Management System
-          </p> */}
-          {/* </div>
-        <div
-          className="  rounded-lg shadow-xl overflow-hidden"
-          style={{
-            backgroundColor: "rgba(255, 255, 255, 0.3)",
-            borderRadius: "10px",
-          }}
-        > */}
+
           <span className="text-start">
             <Outlet />
           </span>

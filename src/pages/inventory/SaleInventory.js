@@ -1,17 +1,30 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import DataTable from "react-data-table-component";
-import { inventoryAPI, exportToCSV, formatDate } from "../../utils/helpfunction";
+import { exportToCSV } from "../../utils/helpfunction";
 import { toast } from "react-toastify";
+import inventoryAPI from "../../utils/api/inventoryAPI";
+import { getCompanyId } from "../../utils/userUtils";
 
 const SaleInventory = () => {
   const { user } = useSelector((state) => state.auth);
   const { selectedCompany } = useSelector((state) => state.company);
-  const [saleInventoryData, setSaleInventoryData] = useState([]);
 
+  // Get companyId from Redux or localStorage
+  const companyId = selectedCompany?.id || getCompanyId() || null;
+
+  // State for data and UI
   const [filterText, setFilterText] = useState("");
+  const [saleInventoryData, setSaleInventoryData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [allData, setAllData] = useState(null);
   // const [showAddModal, setShowAddModal] = useState(false);
   const [newItem, setNewItem] = useState({
     name: "",
@@ -24,156 +37,81 @@ const SaleInventory = () => {
     status: "In Stock",
   });
 
-  // Sample data for sale inventory
-  // const saleInventoryData = [
-  //   {
-  //     id: 1,
-  //     name: "Laptop Dell XPS 13",
-  //     category: "Electronics",
-  //     sku: "DELL-XPS13-001",
-  //     quantity: 8,
-  //     unitPrice: 1299,
-  //     totalValue: 10392,
-  //     location: "Warehouse A",
-  //     status: "In Stock",
-  //   },
-  //   {
-  //     id: 2,
-  //     name: "iPhone 13 Pro",
-  //     category: "Electronics",
-  //     sku: "APPLE-IP13P-001",
-  //     quantity: 12,
-  //     unitPrice: 1099,
-  //     totalValue: 13188,
-  //     location: "Store 1",
-  //     status: "In Stock",
-  //   },
-  //   {
-  //     id: 3,
-  //     name: "Office Desk Chair",
-  //     category: "Furniture",
-  //     sku: "FURN-CHAIR-001",
-  //     quantity: 15,
-  //     unitPrice: 199,
-  //     totalValue: 2985,
-  //     location: "Warehouse B",
-  //     status: "In Stock",
-  //   },
-  //   {
-  //     id: 4,
-  //     name: "Wireless Mouse",
-  //     category: "Electronics",
-  //     sku: "ACC-MOUSE-001",
-  //     quantity: 25,
-  //     unitPrice: 29.99,
-  //     totalValue: 749.75,
-  //     location: "Store 2",
-  //     status: "Low Stock",
-  //   },
-  //   {
-  //     id: 5,
-  //     name: 'LED Monitor 27"',
-  //     category: "Electronics",
-  //     sku: "DISP-MON27-001",
-  //     quantity: 5,
-  //     unitPrice: 299.99,
-  //     totalValue: 1499.95,
-  //     location: "Warehouse A",
-  //     status: "Low Stock",
-  //   },
-  //   {
-  //     id: 6,
-  //     name: "Printer Ink Cartridges",
-  //     category: "Office Supplies",
-  //     sku: "SUP-INK-001",
-  //     quantity: 40,
-  //     unitPrice: 34.99,
-  //     totalValue: 1399.6,
-  //     location: "Store 1",
-  //     status: "In Stock",
-  //   },
-  //   {
-  //     id: 7,
-  //     name: "USB Flash Drives 64GB",
-  //     category: "Electronics",
-  //     sku: "ACC-USB64-001",
-  //     quantity: 0,
-  //     unitPrice: 19.99,
-  //     totalValue: 0,
-  //     location: "Warehouse B",
-  //     status: "Out of Stock",
-  //   },
-  //   {
-  //     id: 8,
-  //     name: "Ergonomic Keyboard",
-  //     category: "Electronics",
-  //     sku: "ACC-KEYB-001",
-  //     quantity: 18,
-  //     unitPrice: 89.99,
-  //     totalValue: 1619.82,
-  //     location: "Store 3",
-  //     status: "In Stock",
-  //   },
-  //   {
-  //     id: 9,
-  //     name: "Desk Lamp LED",
-  //     category: "Office Supplies",
-  //     sku: "LIGHT-DESK-001",
-  //     quantity: 3,
-  //     unitPrice: 49.99,
-  //     totalValue: 149.97,
-  //     location: "Store 2",
-  //     status: "Low Stock",
-  //   },
-  //   {
-  //     id: 10,
-  //     name: "Wireless Headphones",
-  //     category: "Electronics",
-  //     sku: "AUDIO-HEAD-001",
-  //     quantity: 0,
-  //     unitPrice: 159.99,
-  //     totalValue: 0,
-  //     location: "Warehouse A",
-  //     status: "Out of Stock",
-  //   },
-  // ];
+  // Fetch inventory data from API
   useEffect(() => {
-    fetchInventoryData();
-  }, []);
-  
-  // Handle CSV export
-  const handleExportCSV = () => {
-    try {
-      // Prepare data for export (remove complex objects)
-      const exportData = filteredData.map(item => ({
-        name: item.name || '',
-        category: item.category || '',
-        quantity: item.quantity || 0,
-        unitPrice: item.unitPrice || 0,
-        totalValue: item.price?.retail || 0,
-        location: item.location?.warehouseId || '',
-        status: item.status || '',
-        sku: item.sku || '',
-        description: item.description || '',
-        dateAdded: formatDate(item.createdAt)
-      }));
-      
-      exportToCSV(exportData, 'sale_inventory.csv');
-      toast.success("Sale inventory data exported successfully");
-    } catch (error) {
-      console.error("Error exporting data:", error);
-      toast.error("Failed to export inventory data");
+    if (companyId) {
+      fetchInventoryData();
+    } else {
+      console.warn("No companyId available");
+      setSaleInventoryData([]);
     }
-  };
-  const fetchInventoryData = async () => {
+  }, [companyId]);
+
+  const fetchInventoryData = async (
+    page = 1,
+    limit = 10,
+    search = "",
+    sortBy = "",
+    sortOrder = "asc"
+  ) => {
     try {
       setLoading(true);
+      if (!companyId) {
+        console.warn("No companyId available");
+        setSaleInventoryData([]);
+        return;
+      }
 
       const data = await inventoryAPI.getSaleInventory(
-        "6876bda9694900c60234bf5e"
+        companyId,
+        page,
+        limit,
+        search,
+        sortBy,
+        sortOrder
       );
-      console.log("object", data);
-      setSaleInventoryData(Array.isArray(data?.data) ? data?.data : []);
+      console.log("Sale inventory response:", data);
+
+      // Handle the new API response structure
+      let items = [];
+      if (data.success || data.data) {
+        items = Array.isArray(data.data) ? data.data : [];
+      }
+
+      // Clean and validate the data
+      const cleanData = items.map((item) => ({
+        ...item,
+        name: item.name || "Unknown Item",
+        category: item.category || "Uncategorized",
+        sku: item.sku || "N/A",
+        quantity: item.quantity || 0,
+        price: item.price || { retail: 0, cost: 0 },
+        status: item.status || "In Stock",
+        location: item.location || {},
+      }));
+
+      setSaleInventoryData(cleanData);
+      setAllData(data);
+
+      // Update pagination info based on the new API response structure
+      if (data.pagination && data.pagination.current) {
+        const pagination = data.pagination.current;
+        setTotalPages(pagination.pages || 1);
+        setTotalRecords(pagination.total || cleanData.length);
+        setCurrentPage(pagination.page || page);
+        setPerPage(pagination.limit || limit);
+      } else if (data.total) {
+        // Fallback using the total field
+        setTotalPages(Math.ceil(data.total / limit));
+        setTotalRecords(data.total);
+        setCurrentPage(page);
+      } else {
+        // Fallback if pagination info is not provided
+        setTotalPages(1);
+        setTotalRecords(cleanData.length);
+        setCurrentPage(page);
+      }
+
       setError(null);
     } catch (err) {
       console.error("Error fetching inventory data:", err);
@@ -185,7 +123,78 @@ const SaleInventory = () => {
     }
   };
 
-  // Filter data based on search input
+  // Handle CSV export
+  const handleExportCSV = () => {
+    try {
+      let exportData = [];
+      if (allData && allData.success) {
+        // Export all data, not just current page
+        const allItems = Array.isArray(allData.data) ? allData.data : [];
+        exportData = allItems.map((item) => ({
+          name: item.name || "",
+          category: item.category || "",
+          quantity: item.quantity || 0,
+          unitPrice: item.price?.retail || 0,
+          totalValue: (item.quantity || 0) * (item.price?.retail || 0),
+          location: item.location?.warehouseId || "",
+          status: item.status || "",
+          sku: item.sku || "",
+          description: item.description || "",
+          dateAdded: item.createdAt || "",
+        }));
+      } else {
+        // Fallback to current page data
+        exportData = filteredData.map((item) => ({
+          name: item.name || "",
+          category: item.category || "",
+          quantity: item.quantity || 0,
+          unitPrice: item.price?.retail || 0,
+          totalValue: (item.quantity || 0) * (item.price?.retail || 0),
+          location: item.location?.warehouseId || "",
+          status: item.status || "",
+          sku: item.sku || "",
+          description: item.description || "",
+          dateAdded: item.createdAt || "",
+        }));
+      }
+
+      exportToCSV(exportData, "sale_inventory.csv");
+      toast.success("Sale inventory data exported successfully");
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      toast.error("Failed to export inventory data");
+    }
+  };
+
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (filterText !== "") {
+        fetchInventoryData(1, perPage, filterText);
+        setCurrentPage(1);
+      } else {
+        fetchInventoryData(1, perPage);
+        setCurrentPage(1);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [filterText, perPage]);
+
+  // Handle page change
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    fetchInventoryData(page, perPage, filterText);
+  };
+
+  // Handle per page change
+  const handlePerPageChange = (newPerPage) => {
+    setPerPage(newPerPage);
+    setCurrentPage(1);
+    fetchInventoryData(1, newPerPage, filterText);
+  };
+
+  // Filter data based on search input (for local filtering if needed)
   const filteredData = saleInventoryData.filter(
     (item) =>
       (item.name &&
@@ -356,7 +365,7 @@ const SaleInventory = () => {
           >
             Add New Item
           </button> */}
-          <button 
+          <button
             className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
             onClick={handleExportCSV}
           >
@@ -426,6 +435,13 @@ const SaleInventory = () => {
           columns={columns}
           data={filteredData}
           pagination
+          paginationServer
+          paginationTotalRows={totalRecords}
+          paginationDefaultPage={currentPage}
+          paginationPerPage={perPage}
+          paginationRowsPerPageOptions={[10, 20, 50, 100]}
+          onChangePage={handlePageChange}
+          onChangeRowsPerPage={handlePerPageChange}
           responsive
           highlightOnHover
           striped
@@ -433,8 +449,16 @@ const SaleInventory = () => {
           subHeaderComponent={
             <div className="w-full text-right py-2">
               <span className="text-sm text-gray-600">
-                {filteredData.length} records found
+                Showing {(currentPage - 1) * perPage + 1} to{" "}
+                {Math.min(currentPage * perPage, totalRecords)} of{" "}
+                {totalRecords} records
               </span>
+            </div>
+          }
+          progressPending={loading}
+          progressComponent={
+            <div className="flex justify-center items-center p-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
             </div>
           }
         />

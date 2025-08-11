@@ -2,7 +2,14 @@ import React, { useState } from "react";
 import { toast } from "react-toastify";
 import planAPI from "../../utils/api/planAPI";
 
-const PlanForm = ({ onSubmit, onCancel, initialData = null }) => {
+const PlanForm = ({
+  onSubmit,
+  onCancel,
+  initialData = null,
+  mode = "create",
+  loading = false,
+  submitButtonText = "Create Plan",
+}) => {
   // Default form state
   const defaultFormState = {
     name: "",
@@ -22,10 +29,8 @@ const PlanForm = ({ onSubmit, onCancel, initialData = null }) => {
   };
 
   // Initialize form state with initial data or defaults
-  const [formData, setFormData] = useState(
-    initialData || defaultFormState
-  );
-  
+  const [formData, setFormData] = useState(initialData || defaultFormState);
+
   // Form validation state
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,7 +38,7 @@ const PlanForm = ({ onSubmit, onCancel, initialData = null }) => {
   // Handle text input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    
+
     if (name.includes(".")) {
       // Handle nested objects (e.g., limits.warehouseLimit)
       const [parent, child] = name.split(".");
@@ -56,7 +61,7 @@ const PlanForm = ({ onSubmit, onCancel, initialData = null }) => {
   // Handle number input changes
   const handleNumberChange = (e) => {
     const { name, value } = e.target;
-    
+
     if (name.includes(".")) {
       // Handle nested objects (e.g., limits.warehouseLimit)
       const [parent, child] = name.split(".");
@@ -79,7 +84,7 @@ const PlanForm = ({ onSubmit, onCancel, initialData = null }) => {
   // Handle checkbox changes
   const handleCheckboxChange = (e) => {
     const { name, checked } = e.target;
-    
+
     if (name.includes(".")) {
       // Handle nested objects (e.g., limits.includesAIForecasting)
       const [parent, child] = name.split(".");
@@ -130,30 +135,36 @@ const PlanForm = ({ onSubmit, onCancel, initialData = null }) => {
   // Validate form data
   const validateForm = () => {
     const newErrors = {};
-    
+
     // Required fields validation
     if (!formData.name.trim()) newErrors.name = "Name is required";
-    if (!formData.description.trim()) newErrors.description = "Description is required";
-    if (!formData.price || formData.price <= 0) newErrors.price = "Valid price is required";
-    if (!formData.duration || formData.duration < 1) newErrors.duration = "Valid duration is required";
-    if (!formData.stripePriceId.trim()) newErrors.stripePriceId = "Stripe Price ID is required";
-    
+    if (!formData.description.trim())
+      newErrors.description = "Description is required";
+    if (!formData.price || formData.price <= 0)
+      newErrors.price = "Valid price is required";
+    if (!formData.duration || formData.duration < 1)
+      newErrors.duration = "Valid duration is required";
+    if (!formData.stripePriceId.trim())
+      newErrors.stripePriceId = "Stripe Price ID is required";
+
     // Validate limits
-    if (!formData.limits.warehouseLimit || formData.limits.warehouseLimit < 1) 
+    if (!formData.limits.warehouseLimit || formData.limits.warehouseLimit < 1)
       newErrors["limits.warehouseLimit"] = "Valid warehouse limit is required";
-    if (!formData.limits.userLimit || formData.limits.userLimit < 1) 
+    if (!formData.limits.userLimit || formData.limits.userLimit < 1)
       newErrors["limits.userLimit"] = "Valid user limit is required";
-    if (!formData.limits.inventoryLimit || formData.limits.inventoryLimit < 1) 
+    if (!formData.limits.inventoryLimit || formData.limits.inventoryLimit < 1)
       newErrors["limits.inventoryLimit"] = "Valid inventory limit is required";
-    
+
     // Validate features
     if (formData.features.length === 0) {
       newErrors.features = "At least one feature is required";
     } else {
-      const emptyFeatures = formData.features.filter(feature => !feature.trim()).length;
+      const emptyFeatures = formData.features.filter(
+        (feature) => !feature.trim()
+      ).length;
       if (emptyFeatures > 0) newErrors.features = "Features cannot be empty";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -161,23 +172,27 @@ const PlanForm = ({ onSubmit, onCancel, initialData = null }) => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (validateForm()) {
       setIsSubmitting(true);
-      
+
       try {
         // Filter out any empty features
         const cleanedFormData = {
           ...formData,
-          features: formData.features.filter(feature => feature.trim() !== ""),
+          features: formData.features.filter(
+            (feature) => feature.trim() !== ""
+          ),
         };
-        
+
         if (onSubmit) {
           await onSubmit(cleanedFormData);
         }
       } catch (error) {
         console.error("Error submitting form:", error);
-        toast.error("Failed to save plan: " + (error.message || "Unknown error"));
+        toast.error(
+          "Failed to save plan: " + (error.message || "Unknown error")
+        );
       } finally {
         setIsSubmitting(false);
       }
@@ -306,11 +321,15 @@ const PlanForm = ({ onSubmit, onCancel, initialData = null }) => {
               onChange={handleNumberChange}
               min="1"
               className={`w-full px-3 py-2 border rounded-md ${
-                errors["limits.warehouseLimit"] ? "border-red-500" : "border-gray-300"
+                errors["limits.warehouseLimit"]
+                  ? "border-red-500"
+                  : "border-gray-300"
               }`}
             />
             {errors["limits.warehouseLimit"] && (
-              <p className="mt-1 text-sm text-red-500">{errors["limits.warehouseLimit"]}</p>
+              <p className="mt-1 text-sm text-red-500">
+                {errors["limits.warehouseLimit"]}
+              </p>
             )}
           </div>
           <div>
@@ -324,11 +343,15 @@ const PlanForm = ({ onSubmit, onCancel, initialData = null }) => {
               onChange={handleNumberChange}
               min="1"
               className={`w-full px-3 py-2 border rounded-md ${
-                errors["limits.userLimit"] ? "border-red-500" : "border-gray-300"
+                errors["limits.userLimit"]
+                  ? "border-red-500"
+                  : "border-gray-300"
               }`}
             />
             {errors["limits.userLimit"] && (
-              <p className="mt-1 text-sm text-red-500">{errors["limits.userLimit"]}</p>
+              <p className="mt-1 text-sm text-red-500">
+                {errors["limits.userLimit"]}
+              </p>
             )}
           </div>
           <div>
@@ -342,15 +365,19 @@ const PlanForm = ({ onSubmit, onCancel, initialData = null }) => {
               onChange={handleNumberChange}
               min="1"
               className={`w-full px-3 py-2 border rounded-md ${
-                errors["limits.inventoryLimit"] ? "border-red-500" : "border-gray-300"
+                errors["limits.inventoryLimit"]
+                  ? "border-red-500"
+                  : "border-gray-300"
               }`}
             />
             {errors["limits.inventoryLimit"] && (
-              <p className="mt-1 text-sm text-red-500">{errors["limits.inventoryLimit"]}</p>
+              <p className="mt-1 text-sm text-red-500">
+                {errors["limits.inventoryLimit"]}
+              </p>
             )}
           </div>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center">
             <input
@@ -361,7 +388,10 @@ const PlanForm = ({ onSubmit, onCancel, initialData = null }) => {
               onChange={handleCheckboxChange}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
-            <label htmlFor="includesAIForecasting" className="ml-2 block text-sm text-gray-700">
+            <label
+              htmlFor="includesAIForecasting"
+              className="ml-2 block text-sm text-gray-700"
+            >
               Includes AI Forecasting
             </label>
           </div>
@@ -374,7 +404,10 @@ const PlanForm = ({ onSubmit, onCancel, initialData = null }) => {
               onChange={handleCheckboxChange}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
-            <label htmlFor="includesAdvancedReporting" className="ml-2 block text-sm text-gray-700">
+            <label
+              htmlFor="includesAdvancedReporting"
+              className="ml-2 block text-sm text-gray-700"
+            >
               Includes Advanced Reporting
             </label>
           </div>
@@ -439,16 +472,16 @@ const PlanForm = ({ onSubmit, onCancel, initialData = null }) => {
           type="button"
           onClick={onCancel}
           className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-          disabled={isSubmitting}
+          disabled={isSubmitting || loading}
         >
           Cancel
         </button>
         <button
           type="submit"
           className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          disabled={isSubmitting}
+          disabled={isSubmitting || loading}
         >
-          {isSubmitting ? "Saving..." : "Save Plan"}
+          {isSubmitting || loading ? "Saving..." : submitButtonText}
         </button>
       </div>
     </form>

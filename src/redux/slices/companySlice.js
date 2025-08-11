@@ -1,83 +1,30 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import companyAPI from "../../utils/api/companyAPI";
 
-// Sample company data
-const dummyCompanies = [
-  {
-    id: 1,
-    name: 'NextGen Retail Corp',
-    logo: 'https://via.placeholder.com/150?text=NextGen',
-    address: '123 Main Street, Silicon Valley, CA',
-    phone: '(555) 123-4567',
-    email: 'info@nextgenretail.com',
-    website: 'www.nextgenretail.com',
-    status: 'active',
-    subscription: 'premium',
-    createdAt: '2023-01-01',
-  },
-  {
-    id: 2,
-    name: 'Fashion Forward Inc',
-    logo: 'https://via.placeholder.com/150?text=Fashion',
-    address: '456 Market Street, New York, NY',
-    phone: '(555) 234-5678',
-    email: 'info@fashionforward.com',
-    website: 'www.fashionforward.com',
-    status: 'active',
-    subscription: 'yearly',
-    createdAt: '2023-02-15',
-  },
-  {
-    id: 3,
-    name: 'Tech Gadgets Ltd',
-    logo: 'https://via.placeholder.com/150?text=TechGadgets',
-    address: '789 Tech Blvd, Austin, TX',
-    phone: '(555) 345-6789',
-    email: 'info@techgadgets.com',
-    website: 'www.techgadgets.com',
-    status: 'active',
-    subscription: 'simple',
-    createdAt: '2023-03-20',
-  },
-  {
-    id: 4,
-    name: 'Home Essentials Co',
-    logo: 'https://via.placeholder.com/150?text=HomeEssentials',
-    address: '101 Home Ave, Chicago, IL',
-    phone: '(555) 456-7890',
-    email: 'info@homeessentials.com',
-    website: 'www.homeessentials.com',
-    status: 'inactive',
-    subscription: 'yearly',
-    createdAt: '2023-04-10',
-  },
-  {
-    id: 5,
-    name: 'Sports Unlimited',
-    logo: 'https://via.placeholder.com/150?text=SportsUnlimited',
-    address: '202 Stadium Road, Boston, MA',
-    phone: '(555) 567-8901',
-    email: 'info@sportsunlimited.com',
-    website: 'www.sportsunlimited.com',
-    status: 'active',
-    subscription: 'premium',
-    createdAt: '2023-05-05',
+// Async thunk to fetch companies from API
+export const fetchCompanies = createAsyncThunk(
+  "company/fetchCompanies",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await companyAPI.getAllCompanies();
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.message || "Failed to fetch companies");
+    }
   }
-];
+);
 
 const initialState = {
-  companies: dummyCompanies,
+  companies: [],
   selectedCompany: null,
   loading: false,
   error: null,
 };
 
 export const companySlice = createSlice({
-  name: 'company',
+  name: "company",
   initialState,
   reducers: {
-    setCompanies: (state, action) => {
-      state.companies = action.payload;
-    },
     selectCompany: (state, action) => {
       state.selectedCompany = action.payload;
     },
@@ -85,48 +32,56 @@ export const companySlice = createSlice({
       state.companies.push(action.payload);
     },
     updateCompany: (state, action) => {
-      const index = state.companies.findIndex(company => company.id === action.payload.id);
+      const index = state.companies.findIndex(
+        (company) => company._id === action.payload._id
+      );
       if (index !== -1) {
-        state.companies[index] = { ...state.companies[index], ...action.payload };
+        state.companies[index] = {
+          ...state.companies[index],
+          ...action.payload,
+        };
       }
     },
     deleteCompany: (state, action) => {
-      state.companies = state.companies.filter(company => company.id !== action.payload);
-      if (state.selectedCompany && state.selectedCompany.id === action.payload) {
+      state.companies = state.companies.filter(
+        (company) => company._id !== action.payload
+      );
+      if (
+        state.selectedCompany &&
+        state.selectedCompany._id === action.payload
+      ) {
         state.selectedCompany = null;
       }
     },
-    setLoading: (state, action) => {
-      state.loading = action.payload;
+    clearError: (state) => {
+      state.error = null;
     },
-    setError: (state, action) => {
-      state.error = action.payload;
-    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchCompanies.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchCompanies.fulfilled, (state, action) => {
+        state.loading = false;
+        if (action.payload.success) {
+          state.companies = action.payload.data;
+        }
+      })
+      .addCase(fetchCompanies.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      });
   },
 });
 
-export const { 
-  setCompanies, 
-  selectCompany, 
-  addCompany, 
-  updateCompany, 
+export const {
+  selectCompany,
+  addCompany,
+  updateCompany,
   deleteCompany,
-  setLoading,
-  setError
+  clearError,
 } = companySlice.actions;
-
-// Thunk to fetch companies (simulated)
-export const fetchCompanies = () => (dispatch) => {
-  dispatch(setLoading(true));
-  
-  try {
-    // Simulating API call with dummy data
-    dispatch(setCompanies(dummyCompanies));
-    dispatch(setLoading(false));
-  } catch (error) {
-    dispatch(setError(error.message || 'Failed to fetch companies'));
-    dispatch(setLoading(false));
-  }
-};
 
 export default companySlice.reducer;

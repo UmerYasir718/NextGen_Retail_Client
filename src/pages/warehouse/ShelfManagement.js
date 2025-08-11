@@ -142,7 +142,7 @@ const ShelfManagement = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      const zoneId = parseInt(shelfForm.zoneId);
+      const zoneId = shelfForm.zoneId;
 
       // Create payload for API
       const shelfData = {
@@ -191,7 +191,7 @@ const ShelfManagement = () => {
     setShelfForm({
       name: shelf.name,
       description: shelf.description,
-      zoneId: shelf.zoneId.toString(),
+      zoneId: shelf.zoneId,
       type: shelf.type,
       capacity: shelf.capacity,
       status: shelf.status,
@@ -209,14 +209,14 @@ const ShelfManagement = () => {
       const shelfData = {
         name: shelfForm.name,
         description: shelfForm.description,
-        zoneId: parseInt(shelfForm.zoneId),
+        zoneId: shelfForm.zoneId,
         type: shelfForm.type,
         capacity: parseInt(shelfForm.capacity),
         status: shelfForm.status,
       };
 
       // API call to update shelf
-      await shelfAPI.updateShelf(selectedShelf.id, shelfData);
+      await shelfAPI.updateShelf(selectedShelf._id, shelfData);
 
       // Refresh shelves data
       const shelvesResponse = selectedZone
@@ -360,7 +360,7 @@ const ShelfManagement = () => {
   ];
 
   // Get selected zone details
-  const selectedZoneDetails = zones.find((z) => z.id === selectedZone);
+  const selectedZoneDetails = zones.find((z) => z._id === selectedZone);
 
   return (
     <div className="container-fluid mx-auto px-4 py-6">
@@ -526,7 +526,7 @@ const ShelfManagement = () => {
                     >
                       <option value="">Select Zone</option>
                       {zones.map((zone) => (
-                        <option key={zone.id} value={zone.id}>
+                        <option key={zone.id} value={zone._id}>
                           {zone.name} ({findWareHouseById(zone.warehouseId)})
                         </option>
                       ))}

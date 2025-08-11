@@ -5,12 +5,18 @@ import { toast } from "react-toastify";
 import warehouseAPI from "../../utils/api/warehouseAPI";
 import { formatDate, exportToCSV } from "../../utils/helpfunction";
 import WarehouseModal from "../../components/warehouse/WarehouseModal";
+import { getCompanyId } from "../../utils/userUtils";
 
 const WarehousesManagement = () => {
   const { user } = useSelector((state) => state.auth);
-  const [warehousesData, setwarehousesData] = useState([]);
+  const { selectedCompany } = useSelector((state) => state.company);
 
+  // Get companyId from Redux or localStorage
+  const companyId = selectedCompany?.id || getCompanyId() || null;
+
+  // State for data and UI
   const [filterText, setFilterText] = useState("");
+  const [warehousesData, setwarehousesData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -18,19 +24,26 @@ const WarehousesManagement = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState(null);
 
+  // Fetch warehouses data from API
   useEffect(() => {
-    fetchInventoryData();
-  }, []);
+    if (companyId) {
+      fetchInventoryData();
+    } else {
+      console.warn("No companyId available");
+      setwarehousesData([]);
+    }
+  }, [companyId]);
+
   const fetchInventoryData = async () => {
     try {
       setLoading(true);
-      // const companyId = selectedCompany?.id || null;
-      // if (!companyId) {
-      //   setwarehousesData([]);
-      //   return;
-      // }
+      if (!companyId) {
+        console.warn("No companyId available");
+        setwarehousesData([]);
+        return;
+      }
 
-      const data = await warehouseAPI.getWarehouses("6876bda9694900c60234bf5e");
+      const data = await warehouseAPI.getWarehouses(companyId);
       console.log("object", data);
       setwarehousesData(Array.isArray(data?.data) ? data?.data : []);
       console.log("DATA RESPONSE", data);
@@ -38,114 +51,12 @@ const WarehousesManagement = () => {
       setError(null);
     } catch (err) {
       console.error("Error fetching inventory data:", err);
-      // setError("Failed to load inventory data. Please try again.");
       toast.error("Failed to load inventory data");
       setwarehousesData([]);
     } finally {
       setLoading(false);
     }
   };
-  // Sample data for warehouses
-  // const warehousesData = [
-  //   {
-  //     id: 1,
-  //     name: "Main Distribution Center",
-  //     location: "New York, NY",
-  //     address: "123 Warehouse Ave, New York, NY 10001",
-  //     manager: "John Smith",
-  //     phone: "555-123-4567",
-  //     capacity: 10000,
-  //     utilized: 6500,
-  //     items: 1250,
-  //     status: "active",
-  //     companyId: 1,
-  //     companyName: "NextGen Retail Corp",
-  //   },
-  //   {
-  //     id: 2,
-  //     name: "West Coast Facility",
-  //     location: "Los Angeles, CA",
-  //     address: "456 Storage Blvd, Los Angeles, CA 90001",
-  //     manager: "Sarah Johnson",
-  //     phone: "555-234-5678",
-  //     capacity: 8000,
-  //     utilized: 5200,
-  //     items: 980,
-  //     status: "active",
-  //     companyId: 1,
-  //     companyName: "NextGen Retail Corp",
-  //   },
-  //   {
-  //     id: 3,
-  //     name: "Central Storage",
-  //     location: "Chicago, IL",
-  //     address: "789 Inventory St, Chicago, IL 60601",
-  //     manager: "Michael Brown",
-  //     phone: "555-345-6789",
-  //     capacity: 5000,
-  //     utilized: 4800,
-  //     items: 750,
-  //     status: "active",
-  //     companyId: 2,
-  //     companyName: "Fashion Forward Inc",
-  //   },
-  //   {
-  //     id: 4,
-  //     name: "Southern Hub",
-  //     location: "Atlanta, GA",
-  //     address: "321 Logistics Way, Atlanta, GA 30301",
-  //     manager: "Jessica Williams",
-  //     phone: "555-456-7890",
-  //     capacity: 7000,
-  //     utilized: 3500,
-  //     items: 620,
-  //     status: "active",
-  //     companyId: 2,
-  //     companyName: "Fashion Forward Inc",
-  //   },
-  //   {
-  //     id: 5,
-  //     name: "Tech Storage Facility",
-  //     location: "Austin, TX",
-  //     address: "555 Tech Park, Austin, TX 78701",
-  //     manager: "David Miller",
-  //     phone: "555-567-8901",
-  //     capacity: 3000,
-  //     utilized: 1800,
-  //     items: 430,
-  //     status: "active",
-  //     companyId: 3,
-  //     companyName: "Tech Gadgets Ltd",
-  //   },
-  //   {
-  //     id: 6,
-  //     name: "Northeast Depot",
-  //     location: "Boston, MA",
-  //     address: "888 Supply Chain Rd, Boston, MA 02101",
-  //     manager: "Emily Davis",
-  //     phone: "555-678-9012",
-  //     capacity: 4500,
-  //     utilized: 2200,
-  //     items: 510,
-  //     status: "maintenance",
-  //     companyId: 1,
-  //     companyName: "NextGen Retail Corp",
-  //   },
-  //   {
-  //     id: 7,
-  //     name: "Pacific Northwest Storage",
-  //     location: "Seattle, WA",
-  //     address: "444 Warehouse District, Seattle, WA 98101",
-  //     manager: "Robert Wilson",
-  //     phone: "555-789-0123",
-  //     capacity: 6000,
-  //     utilized: 3600,
-  //     items: 680,
-  //     status: "active",
-  //     companyId: 5,
-  //     companyName: "Sports Unlimited",
-  //   },
-  // ];
 
   // Filter data based on search input and user's company (if not super_admin)
   const filteredData = warehousesData.filter((item) => {
@@ -256,7 +167,7 @@ const WarehousesManagement = () => {
           >
             Edit
           </button>
-          <button 
+          <button
             className="px-2 py-1 text-xs bg-purple-500 text-white rounded hover:bg-purple-600"
             onClick={() => {
               setSelectedWarehouse(row);
@@ -322,7 +233,7 @@ const WarehousesManagement = () => {
         <div className="flex space-x-2">
           <button
             className="btn btn-secondary"
-            onClick={() => exportToCSV(filteredData, 'warehouses')}
+            onClick={() => exportToCSV(filteredData, "warehouses")}
           >
             Download CSV
           </button>

@@ -20,14 +20,15 @@ const WarehouseModal = ({
       street: "",
       city: "",
       state: "",
-      postalCode: "",
+      zipCode: "",
       country: "",
     },
     contactInfo: {
       email: "",
       phone: "",
-      manager: "",
+      name: "",
     },
+    capacity: 0,
     utilization: {
       capacityValue: 0,
       utilizationValue: 0,
@@ -50,20 +51,23 @@ const WarehouseModal = ({
           street: initialData.address?.street || "",
           city: initialData.address?.city || "",
           state: initialData.address?.state || "",
-          postalCode: initialData.address?.postalCode || "",
+          zipCode: initialData.address?.zipCode || "",
           country: initialData.address?.country || "",
         },
         contactInfo: {
           email: initialData.contactInfo?.email || "",
           phone: initialData.contactInfo?.phone || "",
-          manager: initialData.contactInfo?.manager || "",
+          name: initialData.contactInfo?.name || "",
         },
+        capacity: initialData.capacity || 0,
         utilization: {
           capacityValue: initialData.utilization?.capacityValue || 0,
           utilizationValue: initialData.utilization?.utilizationValue || 0,
-          utilizationPercentage: initialData.utilization?.utilizationPercentage || 0,
+          utilizationPercentage:
+            initialData.utilization?.utilizationPercentage || 0,
         },
-        isActive: initialData.isActive !== undefined ? initialData.isActive : true,
+        isActive:
+          initialData.isActive !== undefined ? initialData.isActive : true,
         companyId: initialData.companyId || selectedCompany?.id || "",
       });
     } else {
@@ -74,19 +78,20 @@ const WarehouseModal = ({
           street: "",
           city: "",
           state: "",
-          postalCode: "",
+          zipCode: "",
           country: "",
         },
         contactInfo: {
           email: "",
           phone: "",
-          manager: "",
+          name: "",
         },
         utilization: {
           capacityValue: 0,
           utilizationValue: 0,
           utilizationPercentage: 0,
         },
+        capacity: 0,
         isActive: true,
         companyId: selectedCompany?.id || "",
       });
@@ -97,7 +102,7 @@ const WarehouseModal = ({
   // Handle input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Handle nested objects (address, contactInfo, utilization)
     if (name.includes(".")) {
       const [parent, child] = name.split(".");
@@ -131,18 +136,24 @@ const WarehouseModal = ({
     // Required fields
     if (!formData.name) newErrors.name = "Warehouse name is required";
     if (!formData.address.city) newErrors["address.city"] = "City is required";
-    if (!formData.address.country) newErrors["address.country"] = "Country is required";
-    if (!formData.contactInfo.email) newErrors["contactInfo.email"] = "Email is required";
-    if (!formData.contactInfo.manager) newErrors["contactInfo.manager"] = "Manager name is required";
-    
+    if (!formData.address.country)
+      newErrors["address.country"] = "Country is required";
+    if (!formData.contactInfo.email)
+      newErrors["contactInfo.email"] = "Email is required";
+    if (!formData.contactInfo.name)
+      newErrors["contactInfo.name"] = "name name is required";
+
     // Capacity validation
-    if (formData.utilization.capacityValue < 0) {
-      newErrors["utilization.capacityValue"] = "Capacity cannot be negative";
+    if (formData.capacity < 0) {
+      newErrors["capacityValue"] = "Capacity cannot be negative";
     }
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (formData.contactInfo.email && !emailRegex.test(formData.contactInfo.email)) {
+    if (
+      formData.contactInfo.email &&
+      !emailRegex.test(formData.contactInfo.email)
+    ) {
       newErrors["contactInfo.email"] = "Invalid email format";
     }
 
@@ -226,7 +237,10 @@ const WarehouseModal = ({
                         <div className="p-4 space-y-4">
                           {/* Warehouse Name */}
                           <div>
-                            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                            <label
+                              htmlFor="name"
+                              className="block text-sm font-medium text-gray-700 mb-1"
+                            >
                               Warehouse Name*
                             </label>
                             <input
@@ -237,7 +251,9 @@ const WarehouseModal = ({
                               onChange={handleInputChange}
                               disabled={mode === "view"}
                               className={`w-full px-3 py-2 border rounded-md ${
-                                errors.name ? "border-red-500" : "border-gray-300"
+                                errors.name
+                                  ? "border-red-500"
+                                  : "border-gray-300"
                               } ${mode === "view" ? "bg-gray-100" : ""}`}
                             />
                             {errors.name && (
@@ -259,7 +275,10 @@ const WarehouseModal = ({
                                 disabled={mode === "view"}
                                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                               />
-                              <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900">
+                              <label
+                                htmlFor="isActive"
+                                className="ml-2 block text-sm text-gray-900"
+                              >
                                 Active
                               </label>
                             </div>
@@ -267,23 +286,28 @@ const WarehouseModal = ({
 
                           {/* Capacity */}
                           <div>
-                            <label htmlFor="utilization.capacityValue" className="block text-sm font-medium text-gray-700 mb-1">
+                            <label
+                              htmlFor="utilization.capacityValue"
+                              className="block text-sm font-medium text-gray-700 mb-1"
+                            >
                               Capacity
                             </label>
                             <input
                               type="number"
-                              id="utilization.capacityValue"
-                              name="utilization.capacityValue"
-                              value={formData.utilization.capacityValue}
+                              id="capacity"
+                              name="capacity"
+                              value={formData.capacity}
                               onChange={handleInputChange}
                               disabled={mode === "view"}
                               className={`w-full px-3 py-2 border rounded-md ${
-                                errors["utilization.capacityValue"] ? "border-red-500" : "border-gray-300"
+                                errors["capacity"]
+                                  ? "border-red-500"
+                                  : "border-gray-300"
                               } ${mode === "view" ? "bg-gray-100" : ""}`}
                             />
-                            {errors["utilization.capacityValue"] && (
+                            {errors["capacity"] && (
                               <p className="text-red-500 text-xs mt-1">
-                                {errors["utilization.capacityValue"]}
+                                {errors["capacity"]}
                               </p>
                             )}
                           </div>
@@ -298,32 +322,40 @@ const WarehouseModal = ({
                       </h3>
                       <div className="bg-white rounded-lg shadow overflow-hidden mb-4">
                         <div className="p-4 space-y-4">
-                          {/* Manager */}
+                          {/* name */}
                           <div>
-                            <label htmlFor="contactInfo.manager" className="block text-sm font-medium text-gray-700 mb-1">
-                              Manager Name*
+                            <label
+                              htmlFor="contactInfo.name"
+                              className="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                              Name*
                             </label>
                             <input
                               type="text"
-                              id="contactInfo.manager"
-                              name="contactInfo.manager"
-                              value={formData.contactInfo.manager}
+                              id="contactInfo.name"
+                              name="contactInfo.name"
+                              value={formData.contactInfo.name}
                               onChange={handleInputChange}
                               disabled={mode === "view"}
                               className={`w-full px-3 py-2 border rounded-md ${
-                                errors["contactInfo.manager"] ? "border-red-500" : "border-gray-300"
+                                errors["contactInfo.name"]
+                                  ? "border-red-500"
+                                  : "border-gray-300"
                               } ${mode === "view" ? "bg-gray-100" : ""}`}
                             />
-                            {errors["contactInfo.manager"] && (
+                            {errors["contactInfo.name"] && (
                               <p className="text-red-500 text-xs mt-1">
-                                {errors["contactInfo.manager"]}
+                                {errors["contactInfo.name"]}
                               </p>
                             )}
                           </div>
 
                           {/* Email */}
                           <div>
-                            <label htmlFor="contactInfo.email" className="block text-sm font-medium text-gray-700 mb-1">
+                            <label
+                              htmlFor="contactInfo.email"
+                              className="block text-sm font-medium text-gray-700 mb-1"
+                            >
                               Email*
                             </label>
                             <input
@@ -334,7 +366,9 @@ const WarehouseModal = ({
                               onChange={handleInputChange}
                               disabled={mode === "view"}
                               className={`w-full px-3 py-2 border rounded-md ${
-                                errors["contactInfo.email"] ? "border-red-500" : "border-gray-300"
+                                errors["contactInfo.email"]
+                                  ? "border-red-500"
+                                  : "border-gray-300"
                               } ${mode === "view" ? "bg-gray-100" : ""}`}
                             />
                             {errors["contactInfo.email"] && (
@@ -346,7 +380,10 @@ const WarehouseModal = ({
 
                           {/* Phone */}
                           <div>
-                            <label htmlFor="contactInfo.phone" className="block text-sm font-medium text-gray-700 mb-1">
+                            <label
+                              htmlFor="contactInfo.phone"
+                              className="block text-sm font-medium text-gray-700 mb-1"
+                            >
                               Phone
                             </label>
                             <input
@@ -374,7 +411,10 @@ const WarehouseModal = ({
                         <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                           {/* Street */}
                           <div>
-                            <label htmlFor="address.street" className="block text-sm font-medium text-gray-700 mb-1">
+                            <label
+                              htmlFor="address.street"
+                              className="block text-sm font-medium text-gray-700 mb-1"
+                            >
                               Street
                             </label>
                             <input
@@ -392,7 +432,10 @@ const WarehouseModal = ({
 
                           {/* City */}
                           <div>
-                            <label htmlFor="address.city" className="block text-sm font-medium text-gray-700 mb-1">
+                            <label
+                              htmlFor="address.city"
+                              className="block text-sm font-medium text-gray-700 mb-1"
+                            >
                               City*
                             </label>
                             <input
@@ -403,7 +446,9 @@ const WarehouseModal = ({
                               onChange={handleInputChange}
                               disabled={mode === "view"}
                               className={`w-full px-3 py-2 border rounded-md ${
-                                errors["address.city"] ? "border-red-500" : "border-gray-300"
+                                errors["address.city"]
+                                  ? "border-red-500"
+                                  : "border-gray-300"
                               } ${mode === "view" ? "bg-gray-100" : ""}`}
                             />
                             {errors["address.city"] && (
@@ -415,7 +460,10 @@ const WarehouseModal = ({
 
                           {/* State */}
                           <div>
-                            <label htmlFor="address.state" className="block text-sm font-medium text-gray-700 mb-1">
+                            <label
+                              htmlFor="address.state"
+                              className="block text-sm font-medium text-gray-700 mb-1"
+                            >
                               State/Province
                             </label>
                             <input
@@ -433,14 +481,17 @@ const WarehouseModal = ({
 
                           {/* Postal Code */}
                           <div>
-                            <label htmlFor="address.postalCode" className="block text-sm font-medium text-gray-700 mb-1">
+                            <label
+                              htmlFor="address.zipCode"
+                              className="block text-sm font-medium text-gray-700 mb-1"
+                            >
                               Postal Code
                             </label>
                             <input
                               type="text"
-                              id="address.postalCode"
-                              name="address.postalCode"
-                              value={formData.address.postalCode}
+                              id="address.zipCode"
+                              name="address.zipCode"
+                              value={formData.address.zipCode}
                               onChange={handleInputChange}
                               disabled={mode === "view"}
                               className={`w-full px-3 py-2 border rounded-md border-gray-300 ${
@@ -451,7 +502,10 @@ const WarehouseModal = ({
 
                           {/* Country */}
                           <div>
-                            <label htmlFor="address.country" className="block text-sm font-medium text-gray-700 mb-1">
+                            <label
+                              htmlFor="address.country"
+                              className="block text-sm font-medium text-gray-700 mb-1"
+                            >
                               Country*
                             </label>
                             <input
@@ -462,7 +516,9 @@ const WarehouseModal = ({
                               onChange={handleInputChange}
                               disabled={mode === "view"}
                               className={`w-full px-3 py-2 border rounded-md ${
-                                errors["address.country"] ? "border-red-500" : "border-gray-300"
+                                errors["address.country"]
+                                  ? "border-red-500"
+                                  : "border-gray-300"
                               } ${mode === "view" ? "bg-gray-100" : ""}`}
                             />
                             {errors["address.country"] && (
@@ -484,7 +540,11 @@ const WarehouseModal = ({
                         disabled={loading}
                         className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
                       >
-                        {loading ? "Saving..." : mode === "add" ? "Create" : "Update"}
+                        {loading
+                          ? "Saving..."
+                          : mode === "add"
+                          ? "Create"
+                          : "Update"}
                       </button>
                     )}
                     <button

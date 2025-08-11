@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import DataTable from "react-data-table-component";
 import { toast } from "react-toastify";
-import userAPI from "../../utils/api/userAPI";
+import { userAPI } from "../../utils/helpfunction";
 import { formatDate } from "../../utils/helpfunction";
 import { FaSearch, FaPlus, FaSync, FaKey } from "react-icons/fa";
 import PasswordUpdateModal from "../../components/PasswordUpdateModal";
@@ -47,7 +47,7 @@ const UserManagement = () => {
       toast.success(
         `User ${userData.isActive ? "activated" : "deactivated"} successfully`
       );
-      fetchInventoryData();
+      fetchUserData();
     } catch (err) {
       console.error("Error updating user status:", err);
       toast.error(err.message || "Failed to update user status");
@@ -81,16 +81,22 @@ const UserManagement = () => {
   };
 
   useEffect(() => {
-    fetchInventoryData();
+    fetchUserData();
   }, []);
 
-  const fetchInventoryData = async () => {
+  const fetchUserData = async () => {
     try {
       setLoading(true);
       const companyId = selectedCompany?._id || null;
+      
+      console.log("Fetching users with companyId:", companyId);
+      console.log("Selected company:", selectedCompany);
+      console.log("User role:", user?.role);
 
       // Get users based on role
       const response = await userAPI.getUsers(companyId);
+      console.log("API response:", response);
+      
       setuserData(Array.isArray(response.data) ? response.data : []);
 
       setError(null);
@@ -270,7 +276,7 @@ const UserManagement = () => {
       await userAPI.createUser(userData);
       // Success message and refresh data
       toast.success("User created successfully");
-      fetchInventoryData();
+      fetchUserData();
 
       // Reset form and close modal
       setShowAddModal(false);
@@ -315,7 +321,7 @@ const UserManagement = () => {
 
       // Success message and refresh data
       toast.success("User updated successfully");
-      fetchInventoryData();
+      fetchUserData();
 
       // Close modal and reset selected user
       setShowEditModal(false);
@@ -339,10 +345,10 @@ const UserManagement = () => {
           role="alert"
         >
           <p>{error}</p>
-          <button
-            className="flex items-center mt-2 text-sm font-medium text-red-700 hover:text-red-900"
-            onClick={fetchInventoryData}
-          >
+                  <button
+          className="flex items-center mt-2 text-sm font-medium text-red-700 hover:text-red-900"
+          onClick={fetchUserData}
+        >
             <FaSync className="mr-1" /> Retry
           </button>
         </div>

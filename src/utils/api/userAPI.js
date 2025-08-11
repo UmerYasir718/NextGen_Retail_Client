@@ -1,81 +1,20 @@
 import api from "./apiClient";
 
 const userAPI = {
-  // Get all users
-  getUsers: async (companyId = null) => {
+  // Edit user details (without email permission)
+  editUserDetails: async (userData) => {
     try {
-      const params = companyId ? { companyId } : {};
-      const response = await api.get("/users", { params });
+      const response = await api.put("/users/edit-details", userData);
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
     }
   },
 
-  // Get user by ID
-  getUserById: async (userId) => {
+  // Get user profile
+  getUserProfile: async () => {
     try {
-      const response = await api.get(`/users/${userId}`);
-      return response.data;
-    } catch (error) {
-      throw error.response ? error.response.data : error;
-    }
-  },
-
-  // Create a new user
-  createUser: async (userData) => {
-    try {
-      const response = await api.post("/users", userData);
-      return response.data;
-    } catch (error) {
-      throw error.response ? error.response.data : error;
-    }
-  },
-
-  // Update user
-  updateUser: async (userId, userData) => {
-    try {
-      const response = await api.put(`/users/${userId}`, userData);
-      return response.data;
-    } catch (error) {
-      throw error.response ? error.response.data : error;
-    }
-  },
-
-  // Delete user
-  deleteUser: async (userId) => {
-    try {
-      const response = await api.delete(`/users/${userId}`);
-      return response.data;
-    } catch (error) {
-      throw error.response ? error.response.data : error;
-    }
-  },
-
-  // Update user role
-  updateUserRole: async (userId, roleData) => {
-    try {
-      const response = await api.put(`/users/${userId}/role`, roleData);
-      return response.data;
-    } catch (error) {
-      throw error.response ? error.response.data : error;
-    }
-  },
-
-  // Get user roles
-  getUserRoles: async () => {
-    try {
-      const response = await api.get(`/users/roles`);
-      return response.data;
-    } catch (error) {
-      throw error.response ? error.response.data : error;
-    }
-  },
-  
-  // Reset user password
-  resetPassword: async (userId) => {
-    try {
-      const response = await api.post(`/users/${userId}/reset-password`);
+      const response = await api.get("/users/profile");
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;

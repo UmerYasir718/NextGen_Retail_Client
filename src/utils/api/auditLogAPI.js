@@ -1,10 +1,62 @@
 import api from "./apiClient";
 
 const auditLogAPI = {
-  // Get all audit logs
-  getAuditLogs: async () => {
+  // Get all audit logs with pagination and filtering
+  getAuditLogs: async (params = {}) => {
     try {
-      const response = await api.get("/audit-logs");
+      const {
+        page = 1,
+        limit = 10,
+        search = "",
+        dateFilter = "",
+        actionFilter = "",
+        moduleFilter = "",
+        companyId = null,
+        sortBy = "timestamp",
+        sortOrder = "desc",
+      } = params;
+
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        sortBy,
+        sortOrder,
+      });
+
+      if (search) queryParams.append("search", search);
+      if (dateFilter) queryParams.append("dateFilter", dateFilter);
+      if (actionFilter) queryParams.append("actionFilter", actionFilter);
+      if (moduleFilter) queryParams.append("moduleFilter", moduleFilter);
+      if (companyId) queryParams.append("companyId", companyId);
+
+      const response = await api.get(`/audit-logs?${queryParams.toString()}`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Get audit logs count for pagination
+  getAuditLogsCount: async (params = {}) => {
+    try {
+      const {
+        search = "",
+        dateFilter = "",
+        actionFilter = "",
+        moduleFilter = "",
+        companyId = null,
+      } = params;
+
+      const queryParams = new URLSearchParams();
+      if (search) queryParams.append("search", search);
+      if (dateFilter) queryParams.append("dateFilter", dateFilter);
+      if (actionFilter) queryParams.append("actionFilter", actionFilter);
+      if (moduleFilter) queryParams.append("moduleFilter", moduleFilter);
+      if (companyId) queryParams.append("companyId", companyId);
+
+      const response = await api.get(
+        `/audit-logs/count?${queryParams.toString()}`
+      );
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -32,9 +84,10 @@ const auditLogAPI = {
   },
 
   // Get audit log statistics
-  getAuditLogStats: async () => {
+  getAuditLogStats: async (companyId = null) => {
     try {
-      const response = await api.get("/audit-logs/stats");
+      const queryParams = companyId ? `?companyId=${companyId}` : "";
+      const response = await api.get(`/audit-logs/stats${queryParams}`);
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;

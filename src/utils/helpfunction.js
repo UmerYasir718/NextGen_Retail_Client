@@ -1,7 +1,8 @@
 import axios from "axios";
 
 // Base URL for API
-export const API_BASE_URL = "https://nextgenretail.site/server/api";
+export const API_BASE_URL =
+  process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
 // Create axios instance with default config
 const api = axios.create({
@@ -197,6 +198,16 @@ export const userAPI = {
     }
   },
 
+  // Reset user password (send reset email)
+  resetPassword: async (userId) => {
+    try {
+      const response = await api.post(`/users/${userId}/reset-password`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
   // Get user roles
   getUserRoles: async () => {
     try {
@@ -373,7 +384,9 @@ export const inventoryAPI = {
   // Update inventory status
   updateInventoryStatus: async (itemId, statusData) => {
     try {
-      const response = await api.put(`/inventory/${itemId}/status`, statusData);
+      const response = await api.put(`/inventory/${itemId}/status`, {
+        inventoryStatus: statusData,
+      });
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -1024,68 +1037,12 @@ export const shipmentAPI = {
   },
 };
 
-// System Management API functions
-export const systemAPI = {
-  getSystemSettings: async (companyId = null) => {
+// Dashboard API functions
+export const dashboardAPI = {
+  getDashboardData: async (companyId = null) => {
     try {
       const params = companyId ? { companyId } : {};
-      const response = await api.get("/system/settings", { params });
-      return response.data;
-    } catch (error) {
-      throw error.response ? error.response.data : error;
-    }
-  },
-
-  updateSystemSettings: async (settingsData) => {
-    try {
-      const response = await api.put("/system/settings", settingsData);
-      return response.data;
-    } catch (error) {
-      throw error.response ? error.response.data : error;
-    }
-  },
-
-  getUHFDevices: async (companyId = null) => {
-    try {
-      const params = companyId ? { companyId } : {};
-      const response = await api.get("/system/uhf-devices", { params });
-      return response.data;
-    } catch (error) {
-      throw error.response ? error.response.data : error;
-    }
-  },
-
-  getRFIDDevices: async (companyId = null) => {
-    try {
-      const params = companyId ? { companyId } : {};
-      const response = await api.get("/system/rfid-devices", { params });
-      return response.data;
-    } catch (error) {
-      throw error.response ? error.response.data : error;
-    }
-  },
-
-  addDevice: async (deviceData) => {
-    try {
-      const response = await api.post("/system/devices", deviceData);
-      return response.data;
-    } catch (error) {
-      throw error.response ? error.response.data : error;
-    }
-  },
-
-  updateDevice: async (deviceId, deviceData) => {
-    try {
-      const response = await api.put(`/system/devices/${deviceId}`, deviceData);
-      return response.data;
-    } catch (error) {
-      throw error.response ? error.response.data : error;
-    }
-  },
-
-  deleteDevice: async (deviceId) => {
-    try {
-      const response = await api.delete(`/system/devices/${deviceId}`);
+      const response = await api.get("/companies/dashboard/stats", { params });
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -1294,10 +1251,62 @@ export const uhfAPI = {
 
 // Audit Logs API functions
 export const auditLogAPI = {
-  // Get all audit logs
-  getAuditLogs: async () => {
+  // Get all audit logs with pagination and filtering
+  getAuditLogs: async (params = {}) => {
     try {
-      const response = await api.get("/audit-logs");
+      const {
+        page = 1,
+        limit = 10,
+        search = "",
+        dateFilter = "",
+        actionFilter = "",
+        moduleFilter = "",
+        companyId = null,
+        sortBy = "timestamp",
+        sortOrder = "desc",
+      } = params;
+
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        sortBy,
+        sortOrder,
+      });
+
+      if (search) queryParams.append("search", search);
+      if (dateFilter) queryParams.append("dateFilter", dateFilter);
+      if (actionFilter) queryParams.append("actionFilter", actionFilter);
+      if (moduleFilter) queryParams.append("moduleFilter", moduleFilter);
+      if (companyId) queryParams.append("companyId", companyId);
+
+      const response = await api.get(`/audit-logs?${queryParams.toString()}`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Get audit logs count for pagination
+  getAuditLogsCount: async (params = {}) => {
+    try {
+      const {
+        search = "",
+        dateFilter = "",
+        actionFilter = "",
+        moduleFilter = "",
+        companyId = null,
+      } = params;
+
+      const queryParams = new URLSearchParams();
+      if (search) queryParams.append("search", search);
+      if (dateFilter) queryParams.append("dateFilter", dateFilter);
+      if (actionFilter) queryParams.append("actionFilter", actionFilter);
+      if (moduleFilter) queryParams.append("moduleFilter", moduleFilter);
+      if (companyId) queryParams.append("companyId", companyId);
+
+      const response = await api.get(
+        `/audit-logs/count?${queryParams.toString()}`
+      );
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -1325,9 +1334,10 @@ export const auditLogAPI = {
   },
 
   // Get audit log statistics
-  getAuditLogStats: async () => {
+  getAuditLogStats: async (companyId = null) => {
     try {
-      const response = await api.get("/audit-logs/stats");
+      const queryParams = companyId ? `?companyId=${companyId}` : "";
+      const response = await api.get(`/audit-logs/stats${queryParams}`);
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -1605,7 +1615,7 @@ const helpFunctions = {
   binAPI,
   forecastingAPI,
   shipmentAPI,
-  systemAPI,
+  dashboardAPI,
   uhfAPI,
   auditLogAPI,
   notificationAPI,

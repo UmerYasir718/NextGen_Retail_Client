@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
 import DataTable from "react-data-table-component";
+import SuperAdminCompanyManagement from "./SuperAdminCompanyManagement";
 
 const CompanyManagement = () => {
   const { user } = useSelector((state) => state.auth);
 
+  // All hooks must be called before any conditional returns
   const [filterText, setFilterText] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -18,6 +20,11 @@ const CompanyManagement = () => {
     website: "",
     status: "active",
   });
+
+  // If user is super admin, show the super admin version
+  if (user?.role === "super_admin") {
+    return <SuperAdminCompanyManagement />;
+  }
 
   // Sample data for companies
   const companiesData = [

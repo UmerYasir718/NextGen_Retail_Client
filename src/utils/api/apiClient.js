@@ -1,7 +1,8 @@
 import axios from "axios";
 
 // Base URL for API
-export const API_BASE_URL = "https://nextgenretail.site/server/api";
+export const API_BASE_URL =
+  process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
 // Create axios instance with default config
 const api = axios.create({
@@ -35,7 +36,11 @@ api.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("user");
-      window.location.href = "/login";
+      // Only redirect to login if we're not already on a protected route
+      const currentPath = window.location.pathname;
+      if (!currentPath.includes("/login") && !currentPath.includes("/signup")) {
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }

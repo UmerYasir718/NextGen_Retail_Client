@@ -57,8 +57,7 @@ const authAPI = {
   // Reset password with token
   resetPassword: async (token, newPassword) => {
     try {
-      const response = await api.put("/auth/reset-password", {
-        token,
+      const response = await api.put(`/auth/reset-password/${token}`, {
         newPassword,
       });
       return response.data;
@@ -67,7 +66,20 @@ const authAPI = {
     }
   },
 
-  // Update password
+  // Change password (logged in user)
+  changePassword: async (currentPassword, newPassword) => {
+    try {
+      const response = await api.put("/auth/change-password", {
+        currentPassword,
+        newPassword,
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Update password (legacy method)
   updatePassword: async (currentPassword, newPassword) => {
     try {
       const response = await api.put("/auth/update-password", {
@@ -88,6 +100,26 @@ const authAPI = {
       localStorage.removeItem("user");
     } catch (error) {
       console.error("Logout error:", error);
+    }
+  },
+
+  // Verify email with token
+  verifyEmail: async (token, email) => {
+    try {
+      const response = await api.post("/auth/verify-email", { token, email });
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Resend verification email
+  resendVerificationEmail: async (email) => {
+    try {
+      const response = await api.post("/auth/resend-verification", { email });
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
     }
   },
 };

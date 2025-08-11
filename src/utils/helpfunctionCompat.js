@@ -13,7 +13,7 @@ import apiHelpers, {
   binAPI,
   forecastingAPI,
   shipmentAPI,
-  systemAPI,
+  dashboardAPI,
   auditLogAPI,
   notificationAPI,
   helpfileAPI,
@@ -40,7 +40,7 @@ export const shelfAPI = shelfAPI;
 export const binAPI = binAPI;
 export const forecastingAPI = forecastingAPI;
 export const shipmentAPI = shipmentAPI;
-export const systemAPI = systemAPI;
+export const dashboardAPI = dashboardAPI;
 export const auditLogAPI = auditLogAPI;
 export const notificationAPI = notificationAPI;
 export const helpfileAPI = helpfileAPI;

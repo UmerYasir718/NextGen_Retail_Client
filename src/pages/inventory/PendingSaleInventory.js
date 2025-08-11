@@ -1,122 +1,35 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import DataTable from "react-data-table-component";
-import { inventoryAPI, exportToCSV } from "../../utils/helpfunction";
+import { exportToCSV } from "../../utils/helpfunction";
 import { toast } from "react-toastify";
 import { formatDate } from "../../utils/helpfunction";
+import inventoryAPI from "../../utils/api/inventoryAPI";
+import { getCompanyId } from "../../utils/userUtils";
 
 const PendingSaleInventory = () => {
   const { user } = useSelector((state) => state.auth);
   const { selectedCompany } = useSelector((state) => state.company);
-  const [pendingSaleData, setPendingSaleData] = useState([]);
+
+  // Get companyId from Redux or localStorage
+  const companyId = selectedCompany?.id || getCompanyId() || null;
+
+  // State for data and UI
   const [filterText, setFilterText] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [pendingSaleData, setPendingSaleData] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedRows, setSelectedRows] = useState([]);
   const [batchProcessing, setBatchProcessing] = useState(false);
+  const [selectAll, setSelectAll] = useState(false);
 
-  // Sample data for pending sale inventory
-  // const pendingSaleData = [
-  //   {
-  //     id: 1,
-  //     orderNumber: "ORD-2023-0001",
-  //     customer: "Tech Solutions Inc.",
-  //     items: [
-  //       { name: "Laptop Dell XPS 13", quantity: 5, price: 1299, total: 6495 },
-  //       { name: "Wireless Mouse", quantity: 5, price: 29.99, total: 149.95 },
-  //     ],
-  //     totalAmount: 6644.95,
-  //     orderDate: "2023-06-10",
-  //     expectedShipDate: "2023-06-18",
-  //     status: "Processing",
-  //   },
-  //   {
-  //     id: 2,
-  //     orderNumber: "ORD-2023-0002",
-  //     customer: "Global Retail Ltd.",
-  //     items: [
-  //       { name: "iPhone 13 Pro", quantity: 3, price: 1099, total: 3297 },
-  //       { name: "iPhone Case", quantity: 3, price: 49.99, total: 149.97 },
-  //     ],
-  //     totalAmount: 3446.97,
-  //     orderDate: "2023-06-12",
-  //     expectedShipDate: "2023-06-19",
-  //     status: "Awaiting Payment",
-  //   },
-  //   {
-  //     id: 3,
-  //     orderNumber: "ORD-2023-0003",
-  //     customer: "Office Supplies Co.",
-  //     items: [
-  //       { name: "Office Desk Chair", quantity: 10, price: 199, total: 1990 },
-  //       { name: "Desk Lamp LED", quantity: 10, price: 49.99, total: 499.9 },
-  //     ],
-  //     totalAmount: 2489.9,
-  //     orderDate: "2023-06-13",
-  //     expectedShipDate: "2023-06-20",
-  //     status: "Processing",
-  //   },
-  //   {
-  //     id: 4,
-  //     orderNumber: "ORD-2023-0004",
-  //     customer: "Education First",
-  //     items: [
-  //       { name: 'LED Monitor 27"', quantity: 8, price: 299.99, total: 2399.92 },
-  //       {
-  //         name: "Ergonomic Keyboard",
-  //         quantity: 8,
-  //         price: 89.99,
-  //         total: 719.92,
-  //       },
-  //     ],
-  //     totalAmount: 3119.84,
-  //     orderDate: "2023-06-14",
-  //     expectedShipDate: "2023-06-21",
-  //     status: "Ready to Ship",
-  //   },
-  //   {
-  //     id: 5,
-  //     orderNumber: "ORD-2023-0005",
-  //     customer: "Healthcare Systems",
-  //     items: [
-  //       { name: "Laptop Dell XPS 13", quantity: 3, price: 1299, total: 3897 },
-  //       {
-  //         name: "Printer Ink Cartridges",
-  //         quantity: 10,
-  //         price: 34.99,
-  //         total: 349.9,
-  //       },
-  //     ],
-  //     totalAmount: 4246.9,
-  //     orderDate: "2023-06-15",
-  //     expectedShipDate: "2023-06-22",
-  //     status: "On Hold",
-  //   },
-  //   {
-  //     id: 6,
-  //     orderNumber: "ORD-2023-0006",
-  //     customer: "Retail Chain Inc.",
-  //     items: [
-  //       {
-  //         name: "USB Flash Drives 64GB",
-  //         quantity: 50,
-  //         price: 19.99,
-  //         total: 999.5,
-  //       },
-  //       {
-  //         name: "Wireless Headphones",
-  //         quantity: 10,
-  //         price: 159.99,
-  //         total: 1599.9,
-  //       },
-  //     ],
-  //     totalAmount: 2599.4,
-  //     orderDate: "2023-06-16",
-  //     expectedShipDate: "2023-06-23",
-  //     status: "Processing",
-  //   },
-  // ];
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [allData, setAllData] = useState(null);
+
   useEffect(() => {
     fetchInventoryData();
   }, []);
@@ -124,18 +37,35 @@ const PendingSaleInventory = () => {
   // Handle CSV export
   const handleExportCSV = () => {
     try {
-      // Prepare data for export (remove complex objects)
-      const exportData = filteredData.map((item) => ({
-        name: item.name || "",
-        category: item.category || "",
-        quantity: item.quantity || 0,
-        unitPrice: item.unitPrice || 0,
-        totalCost: item.price?.cost || 0,
-        orderDate: formatDate(item.createdAt),
-        status: item.status || "",
-        sku: item.sku || "",
-        description: item.description || "",
-      }));
+      let exportData = [];
+      if (allData && allData.success) {
+        // Export all data, not just current page
+        const allItems = Array.isArray(allData.data) ? allData.data : [];
+        exportData = allItems.map((item) => ({
+          name: item.name || "",
+          category: item.category || "",
+          quantity: item.quantity || 0,
+          unitPrice: item.price?.retail || 0,
+          totalCost: (item.quantity || 0) * (item.price?.cost || 0),
+          orderDate: formatDate(item.createdAt),
+          status: item.status || "",
+          sku: item.sku || "",
+          description: item.description || "",
+        }));
+      } else {
+        // Fallback to current page data
+        exportData = filteredData.map((item) => ({
+          name: item.name || "",
+          category: item.category || "",
+          quantity: item.quantity || 0,
+          unitPrice: item.price?.retail || 0,
+          totalCost: (item.quantity || 0) * (item.price?.cost || 0),
+          orderDate: formatDate(item.createdAt),
+          status: item.status || "",
+          sku: item.sku || "",
+          description: item.description || "",
+        }));
+      }
 
       exportToCSV(exportData, "pending_sale_inventory.csv");
       toast.success("Pending sale inventory data exported successfully");
@@ -204,21 +134,70 @@ const PendingSaleInventory = () => {
     // Refresh data
     fetchInventoryData();
   };
-  const fetchInventoryData = async () => {
+  const fetchInventoryData = async (
+    page = 1,
+    limit = 10,
+    search = "",
+    sortBy = "",
+    sortOrder = "asc"
+  ) => {
     try {
       setLoading(true);
-      // const companyId = selectedCompany?.id || null;
-      // if (!companyId) {
-      //   setInventoryData([]);
-      //   return;
-      // }
+      if (!companyId) {
+        console.warn("No companyId available");
+        setPendingSaleData([]);
+        return;
+      }
 
       const data = await inventoryAPI.getPendingSaleInventory(
-        "6876bda9694900c60234bf5e"
+        companyId,
+        page,
+        limit,
+        search,
+        sortBy,
+        sortOrder
       );
-      console.log("object", data);
-      setPendingSaleData(Array.isArray(data?.data) ? data?.data : []);
-      console.log("DATA RESPONSE", data);
+      console.log("Pending sale inventory response:", data);
+
+      // Handle the new API response structure
+      let items = [];
+      if (data.success || data.data) {
+        items = Array.isArray(data.data) ? data.data : [];
+      }
+
+      // Clean and validate the data
+      const cleanData = items.map((item) => ({
+        ...item,
+        name: item.name || "Unknown Item",
+        category: item.category || "Uncategorized",
+        sku: item.sku || "N/A",
+        quantity: item.quantity || 0,
+        price: item.price || { retail: 0, cost: 0 },
+        status: item.status || "Processing",
+        location: item.location || {},
+      }));
+
+      setPendingSaleData(cleanData);
+      setAllData(data);
+
+      // Update pagination info based on the new API response structure
+      if (data.pagination && data.pagination.current) {
+        const pagination = data.pagination.current;
+        setTotalPages(pagination.pages || 1);
+        setTotalRecords(pagination.total || cleanData.length);
+        setCurrentPage(pagination.page || page);
+        setPerPage(pagination.limit || limit);
+      } else if (data.total) {
+        // Fallback using the total field
+        setTotalPages(Math.ceil(data.total / limit));
+        setTotalRecords(data.total);
+        setCurrentPage(page);
+      } else {
+        // Fallback if pagination info is not provided
+        setTotalPages(1);
+        setTotalRecords(cleanData.length);
+        setCurrentPage(page);
+      }
 
       setError(null);
     } catch (err) {
@@ -231,7 +210,35 @@ const PendingSaleInventory = () => {
     }
   };
 
-  // Filter data based on search input
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (filterText !== "") {
+        fetchInventoryData(1, perPage, filterText);
+        setCurrentPage(1);
+      } else {
+        fetchInventoryData(1, perPage);
+        setCurrentPage(1);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [filterText, perPage]);
+
+  // Handle page change
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    fetchInventoryData(page, perPage, filterText);
+  };
+
+  // Handle per page change
+  const handlePerPageChange = (newPerPage) => {
+    setPerPage(newPerPage);
+    setCurrentPage(1);
+    fetchInventoryData(1, newPerPage, filterText);
+  };
+
+  // Filter data based on search input (for local filtering if needed)
   const filteredData = pendingSaleData.filter(
     (item) =>
       (item.orderNumber &&
@@ -241,7 +248,20 @@ const PendingSaleInventory = () => {
       (item.status &&
         item.status.toLowerCase().includes(filterText.toLowerCase()))
   );
-
+  const handleUpdateStatus = async (id, status) => {
+    try {
+      const response = await inventoryAPI.updateInventoryStatus(
+        id,
+        status.toString()
+      );
+      console.log("response", response);
+      toast.success("Inventory status updated successfully");
+      fetchInventoryData();
+    } catch (err) {
+      console.error("Error updating inventory status:", err);
+      toast.error("Failed to update inventory status");
+    }
+  };
   // Table columns
   const columns = [
     {
@@ -305,16 +325,16 @@ const PendingSaleInventory = () => {
       cell: (row) => (
         <div className="flex space-x-2">
           <button
-            className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-            onClick={() => {
-              setSelectedOrder(row);
-              // setShowDetailsModal(true);
-            }}
+            onClick={() => handleUpdateStatus(row._id, "sale")}
+            className="text-green-600 hover:text-green-900 mr-2"
           >
-            Details
+            Approve
           </button>
-          <button className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600">
-            Ship
+          <button
+            onClick={() => handleUpdateStatus(row._id, "purchase")}
+            className="text-red-600 hover:text-red-900"
+          >
+            Reject
           </button>
         </div>
       ),
@@ -477,6 +497,13 @@ const PendingSaleInventory = () => {
           columns={columns}
           data={filteredData}
           pagination
+          paginationServer
+          paginationTotalRows={totalRecords}
+          paginationDefaultPage={currentPage}
+          paginationPerPage={perPage}
+          paginationRowsPerPageOptions={[10, 20, 50, 100]}
+          onChangePage={handlePageChange}
+          onChangeRowsPerPage={handlePerPageChange}
           responsive
           highlightOnHover
           striped
@@ -488,8 +515,16 @@ const PendingSaleInventory = () => {
           subHeaderComponent={
             <div className="w-full text-right py-2">
               <span className="text-sm text-gray-600">
-                {filteredData.length} orders found
+                Showing {(currentPage - 1) * perPage + 1} to{" "}
+                {Math.min(currentPage * perPage, totalRecords)} of{" "}
+                {totalRecords} orders
               </span>
+            </div>
+          }
+          progressPending={loading}
+          progressComponent={
+            <div className="flex justify-center items-center p-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
             </div>
           }
         />

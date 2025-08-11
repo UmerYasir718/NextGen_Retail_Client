@@ -23,9 +23,30 @@ const inventoryAPI = {
   },
 
   // Get inventory with purchase status
-  getPurchaseInventory: async (companyId = null) => {
+  getPurchaseInventory: async (
+    companyId = null,
+    page = 1,
+    limit = 10,
+    search = "",
+    sortBy = "",
+    sortOrder = "asc"
+  ) => {
     try {
-      const params = companyId ? { companyId } : {};
+      const params = { page, limit };
+
+      if (companyId) {
+        params.companyId = companyId;
+      }
+
+      if (search) {
+        params.search = search;
+      }
+
+      if (sortBy) {
+        params.sortBy = sortBy;
+        params.sortOrder = sortOrder;
+      }
+
       const response = await api.get("/inventory/purchase", { params });
       return response.data;
     } catch (error) {
@@ -34,9 +55,30 @@ const inventoryAPI = {
   },
 
   // Get inventory with sale_pending status
-  getPendingSaleInventory: async (companyId = null) => {
+  getPendingSaleInventory: async (
+    companyId = null,
+    page = 1,
+    limit = 10,
+    search = "",
+    sortBy = "",
+    sortOrder = "asc"
+  ) => {
     try {
-      const params = companyId ? { companyId } : {};
+      const params = { page, limit };
+
+      if (companyId) {
+        params.companyId = companyId;
+      }
+
+      if (search) {
+        params.search = search;
+      }
+
+      if (sortBy) {
+        params.sortBy = sortBy;
+        params.sortOrder = sortOrder;
+      }
+
       const response = await api.get("/inventory/sale-pending", { params });
       return response.data;
     } catch (error) {
@@ -45,9 +87,30 @@ const inventoryAPI = {
   },
 
   // Get inventory with sale status
-  getSaleInventory: async (companyId = null) => {
+  getSaleInventory: async (
+    companyId = null,
+    page = 1,
+    limit = 10,
+    search = "",
+    sortBy = "",
+    sortOrder = "asc"
+  ) => {
     try {
-      const params = companyId ? { companyId } : {};
+      const params = { page, limit };
+
+      if (companyId) {
+        params.companyId = companyId;
+      }
+
+      if (search) {
+        params.search = search;
+      }
+
+      if (sortBy) {
+        params.sortBy = sortBy;
+        params.sortOrder = sortOrder;
+      }
+
       const response = await api.get("/inventory/sale", { params });
       return response.data;
     } catch (error) {
@@ -89,6 +152,73 @@ const inventoryAPI = {
   updateInventoryStatus: async (itemId, statusData) => {
     try {
       const response = await api.put(`/inventory/${itemId}/status`, statusData);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Get temp inventory records by file ID
+  getTempInventoryByFileId: async (fileId) => {
+    try {
+      const response = await api.get(`/inventory/temp/file/${fileId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Get inventory data by file ID (alias for getTempInventoryByFileId)
+  getInventoryDataByFileId: async (fileId) => {
+    try {
+      const response = await api.get(`/inventory/temp/file/${fileId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Approve temp inventory record
+  approveTempInventory: async (recordId) => {
+    try {
+      const response = await api.put(`/inventory/temp/${recordId}/approve`);
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Reject temp inventory record
+  rejectTempInventory: async (recordId, reason = "") => {
+    try {
+      const response = await api.put(`/inventory/temp/${recordId}/reject`, {
+        reason,
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Batch approve temp inventory records
+  batchApproveTempInventory: async (recordIds) => {
+    try {
+      const response = await api.put(`/inventory/temp/batch/approve`, {
+        recordIds,
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Batch reject temp inventory records
+  batchRejectTempInventory: async (recordIds, reason = "") => {
+    try {
+      const response = await api.put(`/inventory/temp/batch/reject`, {
+        recordIds,
+        reason,
+      });
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;
@@ -163,7 +293,22 @@ const inventoryAPI = {
   // Get inventory by location (warehouse, zone, shelf, bin)
   getInventoryByLocation: async (locationType, locationId) => {
     try {
-      const response = await api.get(`/inventory/location/${locationType}/${locationId}`);
+      const response = await api.get(
+        `/inventory/location/${locationType}/${locationId}`
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response ? error.response.data : error;
+    }
+  },
+
+  // Process temp file - approve or reject entire file
+  processTempFile: async (fileId, status) => {
+    try {
+      const response = await api.post("/inventory/process-temp-file", {
+        fileId,
+        status,
+      });
       return response.data;
     } catch (error) {
       throw error.response ? error.response.data : error;

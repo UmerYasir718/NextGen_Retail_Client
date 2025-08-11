@@ -1,21 +1,24 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import DataTable from "react-data-table-component";
 import { toast } from "react-toastify";
 import planAPI from "../../utils/api/planAPI";
 import AddPlanModal from "../../components/plans/AddPlanModal";
+import EditPlanModal from "../../components/plans/EditPlanModal";
+import ViewPlanModal from "../../components/plans/ViewPlanModal";
 
 const PlanManagement = () => {
   const { user } = useSelector((state) => state.auth);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [filterText, setFilterText] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
-  // Edit modal functionality will be implemented in the future
-  // const [showEditModal, setShowEditModal] = useState(false);
-  // const [selectedPlan, setSelectedPlan] = useState(null);
-  
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+
   // Redirect if user is not super_admin
   useEffect(() => {
     if (!user || user.role !== "super_admin") {
@@ -23,55 +26,81 @@ const PlanManagement = () => {
       navigate("/dashboard");
     }
   }, [user, navigate]);
-  
+
   // State for API data
   const [plansData, setPlansData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Fetch plans data when component mounts
   useEffect(() => {
     fetchPlans();
   }, []);
-  
+
+  // Check for edit parameter in URL
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const editPlanId = searchParams.get("edit");
+
+    if (editPlanId) {
+      // Find the plan to edit
+      const planToEdit = plansData.find((plan) => plan._id === editPlanId);
+      if (planToEdit) {
+        setSelectedPlan(planToEdit);
+        setShowEditModal(true);
+        // Clear the URL parameter
+        navigate(location.pathname, { replace: true });
+      }
+    }
+  }, [plansData, location.search, navigate, location.pathname]);
+
   // Function to fetch plans from API
   const fetchPlans = async () => {
     try {
       setLoading(true);
       const response = await planAPI.getPlans();
-      console.log('Plans data:', response);
-      
+      console.log("Plans data:", response);
+
       if (response?.success && Array.isArray(response?.data)) {
         setPlansData(response.data);
       } else {
-        setError('Failed to load plans data');
-        toast.error('Failed to load plans data');
+        setError("Failed to load plans data");
+        toast.error("Failed to load plans data");
       }
     } catch (err) {
-      console.error('Error fetching plans:', err);
-      setError('Error loading plans: ' + (err.message || 'Unknown error'));
-      toast.error('Error loading plans: ' + (err.message || 'Unknown error'));
+      console.error("Error fetching plans:", err);
+      setError("Error loading plans: " + (err.message || "Unknown error"));
+      toast.error("Error loading plans: " + (err.message || "Unknown error"));
     } finally {
       setLoading(false);
     }
   };
-  
+
   // Handle plan added event
   const handlePlanAdded = (newPlan) => {
     fetchPlans(); // Refresh the plans list
-    toast.success('Plan added successfully!');
+    toast.success("Plan added successfully!");
   };
-  
+
+  // Handle plan updated event
+  const handlePlanUpdated = (updatedPlan) => {
+    fetchPlans(); // Refresh the plans list
+    toast.success("Plan updated successfully!");
+  };
+
   // View plan details
-  const viewPlanDetails = (planId) => {
-    navigate(`/plans/${planId}`);
+  const viewPlanDetails = (plan) => {
+    setSelectedPlan(plan);
+    setShowViewModal(true);
   };
 
   // Loading state
   if (loading) {
     return (
       <div className="container-fluid mx-auto px-4 py-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Plan Management</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">
+          Plan Management
+        </h1>
         <p className="text-gray-600 mb-6">Loading plans...</p>
         <div className="bg-white rounded-lg shadow p-6">
           <div className="animate-pulse">
@@ -90,12 +119,11 @@ const PlanManagement = () => {
         item.name.toLowerCase().includes(filterText.toLowerCase())) ||
       (item.description &&
         item.description.toLowerCase().includes(filterText.toLowerCase())) ||
-      (item.duration &&
-        item.duration.toString().includes(filterText)) ||
-      ((item.isActive ? "active" : "inactive").includes(filterText.toLowerCase()))
+      (item.duration && item.duration.toString().includes(filterText)) ||
+      (item.isActive ? "active" : "inactive").includes(filterText.toLowerCase())
     );
   });
-  
+
   // Plan duration display mapper
   const getPlanTypeDisplay = (duration) => {
     if (duration >= 12) {
@@ -164,17 +192,15 @@ const PlanManagement = () => {
           <div className="flex space-x-2">
             <button
               className="text-blue-600 hover:text-blue-900"
-              onClick={() => viewPlanDetails(row._id)}
+              onClick={() => viewPlanDetails(row)}
             >
               View
             </button>
             <button
               className="text-green-600 hover:text-green-900"
               onClick={() => {
-                // Edit functionality will be implemented in the future
-                toast.info("Edit functionality coming soon!");
-                // setSelectedPlan(row);
-                // setShowEditModal(true);
+                setSelectedPlan(row);
+                setShowEditModal(true);
               }}
             >
               Edit
@@ -188,13 +214,17 @@ const PlanManagement = () => {
   // Calculate statistics
   const totalPlans = plansData.length;
   const activePlans = plansData.filter((plan) => plan.isActive).length;
-  
+
   // Calculate plan durations
   const planDurations = plansData.reduce(
     (types, plan) => {
-      const durationType = plan.duration >= 12 ? 'annual' : 
-                          plan.duration >= 6 ? 'biannual' : 'monthly';
-      
+      const durationType =
+        plan.duration >= 12
+          ? "annual"
+          : plan.duration >= 6
+          ? "biannual"
+          : "monthly";
+
       if (durationType in types) {
         types[durationType] += 1;
       } else {
@@ -332,13 +362,38 @@ const PlanManagement = () => {
           }
         />
       </div>
-      
+
       {/* Add Plan Modal */}
       {showAddModal && (
         <AddPlanModal
           isOpen={showAddModal}
           onClose={() => setShowAddModal(false)}
           onPlanAdded={handlePlanAdded}
+        />
+      )}
+
+      {/* View Plan Modal */}
+      {showViewModal && selectedPlan && (
+        <ViewPlanModal
+          isOpen={showViewModal}
+          onClose={() => {
+            setShowViewModal(false);
+            setSelectedPlan(null);
+          }}
+          plan={selectedPlan}
+        />
+      )}
+
+      {/* Edit Plan Modal */}
+      {showEditModal && selectedPlan && (
+        <EditPlanModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedPlan(null);
+          }}
+          plan={selectedPlan}
+          onPlanUpdated={handlePlanUpdated}
         />
       )}
     </div>

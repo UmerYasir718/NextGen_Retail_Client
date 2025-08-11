@@ -10,12 +10,14 @@ import planAPI from "./planAPI";
 import inventoryAPI from "./inventoryAPI";
 import shipmentAPI from "./shipmentAPI";
 import forecastingAPI from "./forecastingAPI";
-import systemAPI from "./systemAPI";
+
 import helpfileAPI from "./helpfileAPI";
 import auditLogAPI from "./auditLogAPI";
 import uhfAPI from "./uhfAPI";
 import notificationAPI from "./notificationAPI";
 import websocketAPI from "./websocketAPI";
+import aiAPI, { AI_BASE_URL } from "./aiAPI";
+import adminAPI from "./adminAPI";
 
 // Utility functions
 export const formatDate = (dateString) => {
@@ -56,6 +58,7 @@ export const downloadFile = (blob, filename) => {
 export {
   api,
   API_BASE_URL,
+  AI_BASE_URL,
   authAPI,
   userAPI,
   companyAPI,
@@ -67,18 +70,20 @@ export {
   inventoryAPI,
   shipmentAPI,
   forecastingAPI,
-  systemAPI,
   helpfileAPI,
   auditLogAPI,
   uhfAPI,
   notificationAPI,
   websocketAPI,
+  aiAPI,
+  adminAPI,
 };
 
 // Create a default export object for backward compatibility
 const apiHelpers = {
   api,
   API_BASE_URL,
+  AI_BASE_URL,
   authAPI,
   userAPI,
   companyAPI,
@@ -90,12 +95,13 @@ const apiHelpers = {
   inventoryAPI,
   shipmentAPI,
   forecastingAPI,
-  systemAPI,
   helpfileAPI,
   auditLogAPI,
   uhfAPI,
   notificationAPI,
   websocketAPI,
+  aiAPI,
+  adminAPI,
   formatDate,
   formatCurrency,
   getStatusColor,

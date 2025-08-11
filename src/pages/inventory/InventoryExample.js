@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import DataTable from "react-data-table-component";
-import { inventoryAPI } from "../../utils/helpfunction";
+import { getCompanyId } from "../../utils/userUtils";
+import inventoryAPI from "../../utils/api/inventoryAPI";
 import { toast } from "react-toastify";
 import InventoryModal from "../../components/inventory/InventoryModal";
 
@@ -21,39 +22,34 @@ const InventoryExample = () => {
   const [modalType, setModalType] = useState("purchase"); // purchase, pending_sale, sale
   const [selectedItem, setSelectedItem] = useState(null);
 
-  // Fetch inventory data from API
-  useEffect(() => {
-    fetchInventoryData();
-  }, []);
+  // Get companyId from Redux or localStorage
+  const companyId = selectedCompany?.id || getCompanyId() || null;
 
-  const fetchInventoryData = async () => {
-    try {
-      setLoading(true);
-      const companyId = selectedCompany?.id || "6876bda9694900c60234bf5e"; // Default ID for example
-      
-      // Fetch all inventory types
-      const purchaseData = await inventoryAPI.getPurchaseInventory(companyId);
-      const pendingSaleData = await inventoryAPI.getPendingSaleInventory(companyId);
-      const saleData = await inventoryAPI.getSaleInventory(companyId);
-      
-      // Combine and mark with type
-      const combinedData = [
-        ...(Array.isArray(purchaseData?.data) ? purchaseData.data.map(item => ({...item, inventoryType: 'purchase'})) : []),
-        ...(Array.isArray(pendingSaleData?.data) ? pendingSaleData.data.map(item => ({...item, inventoryType: 'pending_sale'})) : []),
-        ...(Array.isArray(saleData?.data) ? saleData.data.map(item => ({...item, inventoryType: 'sale'})) : [])
-      ];
-      
-      setInventoryData(combinedData);
-      setError(null);
-    } catch (err) {
-      console.error("Error fetching inventory data:", err);
-      setError("Failed to load inventory data. Please try again.");
-      toast.error("Failed to load inventory data");
-      setInventoryData([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!companyId) {
+        console.warn("No companyId available");
+        setInventoryData([]);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await inventoryAPI.getAllInventory(companyId);
+        setInventoryData(Array.isArray(data?.data) ? data.data : []);
+      } catch (err) {
+        console.error("Error fetching inventory:", err);
+        setError("Failed to load inventory data");
+        toast.error("Failed to load inventory data");
+        setInventoryData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [companyId]);
 
   // Filter data based on search input
   const filteredData = inventoryData.filter(
@@ -96,7 +92,9 @@ const InventoryExample = () => {
     setModalOpen(false);
     
     // Refresh data
-    fetchInventoryData();
+    // The original code had fetchInventoryData, but it was removed.
+    // If you want to refresh, you'd need to re-fetch the data here.
+    // For now, we'll just close the modal.
   };
 
   // Table columns

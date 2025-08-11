@@ -3,14 +3,21 @@ import { toast } from "react-toastify";
 import planAPI from "../../utils/api/planAPI";
 import PlanForm from "./PlanForm";
 
-const AddPlanModal = ({ isOpen, onClose, onPlanAdded }) => {
+const AddPlanModal = ({
+  isOpen,
+  onClose,
+  onPlanAdded,
+  initialData = null,
+  mode = "create",
+  submitButtonText = "Create Plan",
+}) => {
   if (!isOpen) return null;
 
   // Handle form submission
   const handleSubmit = async (formData) => {
     try {
       const response = await planAPI.createPlan(formData);
-      
+
       if (response && response.success) {
         toast.success("Plan created successfully!");
         if (onPlanAdded) {
@@ -23,7 +30,9 @@ const AddPlanModal = ({ isOpen, onClose, onPlanAdded }) => {
       }
     } catch (error) {
       console.error("Error creating plan:", error);
-      toast.error("Failed to create plan: " + (error.message || "Unknown error"));
+      toast.error(
+        "Failed to create plan: " + (error.message || "Unknown error")
+      );
       throw error;
     }
   };
@@ -46,10 +55,16 @@ const AddPlanModal = ({ isOpen, onClose, onPlanAdded }) => {
             <div className="sm:flex sm:items-start">
               <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
                 <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                  Add New Plan
+                  {mode === "duplicate" ? "Duplicate Plan" : "Add New Plan"}
                 </h3>
                 <div className="mt-2">
-                  <PlanForm onSubmit={handleSubmit} onCancel={onClose} />
+                  <PlanForm
+                    onSubmit={handleSubmit}
+                    onCancel={onClose}
+                    initialData={initialData}
+                    mode={mode}
+                    submitButtonText={submitButtonText}
+                  />
                 </div>
               </div>
             </div>

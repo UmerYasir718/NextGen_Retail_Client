@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { Bar, Line, Pie } from "react-chartjs-2";
 import { toast } from "react-toastify";
 import {
@@ -15,8 +15,11 @@ import {
   Legend,
 } from "chart.js";
 import DataTable from "react-data-table-component";
-import systemAPI from "../utils/api/systemAPI";
+import { dashboardAPI } from "../utils/helpfunction";
+import planAPI from "../utils/api/planAPI";
+import PlanStatus from "../components/PlanStatus";
 import { FaSpinner } from "react-icons/fa";
+import { refreshCurrentPlan } from "../redux/slices/authSlice";
 
 // Register ChartJS components
 ChartJS.register(
@@ -47,48 +50,49 @@ const chartOptions = {
 const Dashboard = () => {
   const { user } = useSelector((state) => state.auth);
   const { selectedCompany } = useSelector((state) => state.company);
+  const dispatch = useDispatch();
 
   const [timeframe, setTimeframe] = useState("monthly");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dashboardData, setDashboardData] = useState(null);
-  
+
   // State for chart data
   const [salesData, setSalesData] = useState(null);
   const [inventoryData, setInventoryData] = useState(null);
   const [revenueData, setRevenueData] = useState(null);
   const [recentSalesData, setRecentSalesData] = useState([]);
   const [lowStockItems, setLowStockItems] = useState([]);
-  
+
   // Fetch dashboard data
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         // Get company ID if available
         const companyId = selectedCompany?.id || null;
-        
+
         // Fetch dashboard data from API
-        const response = await systemAPI.getDashboardData(companyId);
-        
+        const response = await dashboardAPI.getDashboardData(companyId);
+
         if (response.success && response.data) {
           setDashboardData(response.data);
-          
+
           // Set chart data from API response
           if (response.data.salesData) {
             setSalesData(response.data.salesData);
           }
-          
+
           if (response.data.inventoryData) {
             setInventoryData(response.data.inventoryData);
           }
-          
+
           if (response.data.revenueData) {
             setRevenueData(response.data.revenueData);
           }
-          
+
           // Set table data
           setRecentSalesData(response.data.recentSalesData || []);
           setLowStockItems(response.data.lowStockItems || []);
@@ -97,15 +101,27 @@ const Dashboard = () => {
         }
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
-        setError(err.message || "An error occurred while fetching dashboard data");
+        setError(
+          err.message || "An error occurred while fetching dashboard data"
+        );
         toast.error("Failed to load dashboard data");
       } finally {
         setLoading(false);
       }
     };
-    
-    fetchDashboardData();
-  }, [selectedCompany]);
+
+    // Refresh current plan data when dashboard loads
+    const refreshPlanData = async () => {
+      try {
+        await dispatch(refreshCurrentPlan());
+      } catch (error) {
+        console.error("Error refreshing plan data:", error);
+      }
+    };
+
+    // Fetch both dashboard data and refresh plan data
+    Promise.all([fetchDashboardData(), refreshPlanData()]);
+  }, [selectedCompany, dispatch]);
 
   // Table columns
   const recentSalesColumns = [
@@ -159,6 +175,9 @@ const Dashboard = () => {
         </p>
       </div>
 
+      {/* Plan Status Component */}
+      <PlanStatus />
+
       {/* Company Selection Notice for Super Admin */}
       {user?.role === "super_admin" && (
         <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -174,22 +193,27 @@ const Dashboard = () => {
           </div>
         </div>
       )}
-      
+
       {/* Loading State */}
       {loading && (
         <div className="flex justify-center items-center h-64">
           <FaSpinner className="animate-spin text-blue-600 text-4xl" />
-          <span className="ml-2 text-lg text-gray-700">Loading dashboard data...</span>
+          <span className="ml-2 text-lg text-gray-700">
+            Loading dashboard data...
+          </span>
         </div>
       )}
-      
+
       {/* Error State */}
       {error && !loading && (
-        <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6" role="alert">
+        <div
+          className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6"
+          role="alert"
+        >
           <p className="font-bold">Error</p>
           <p>{error}</p>
-          <button 
-            className="mt-2 text-sm underline" 
+          <button
+            className="mt-2 text-sm underline"
             onClick={() => window.location.reload()}
           >
             Retry
@@ -204,10 +228,18 @@ const Dashboard = () => {
           <div className="bg-white rounded-lg shadow p-6 mb-8">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between">
               <div className="mb-4 md:mb-0">
-                <h2 className="text-2xl font-bold text-gray-900">{dashboardData.companyName}</h2>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {dashboardData.companyName}
+                </h2>
                 <div className="flex items-center mt-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${dashboardData.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {dashboardData.isActive ? 'Active' : 'Inactive'}
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      dashboardData.isActive
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {dashboardData.isActive ? "Active" : "Inactive"}
                   </span>
                   <span className="ml-2 px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-medium">
                     {dashboardData.planStatus}
@@ -215,19 +247,27 @@ const Dashboard = () => {
                 </div>
               </div>
               <div className="flex flex-col items-end">
-                <div className="text-sm font-medium text-gray-500">Plan expires in</div>
-                <div className="text-lg font-bold text-gray-900">{dashboardData.daysRemaining} days</div>
+                <div className="text-sm font-medium text-gray-500">
+                  Plan expires in
+                </div>
+                <div className="text-lg font-bold text-gray-900">
+                  {dashboardData.daysRemaining} days
+                </div>
               </div>
             </div>
           </div>
-          
+
           {/* Stats Overview */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Users</p>
-                  <p className="text-2xl font-bold text-gray-900">{dashboardData.userCount}</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Total Users
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {dashboardData.userCount}
+                  </p>
                 </div>
                 <div className="p-3 rounded-full bg-blue-100 text-blue-500">
                   👥
@@ -239,12 +279,20 @@ const Dashboard = () => {
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Plan Status</p>
-                  <p className="text-2xl font-bold text-gray-900">{dashboardData.planStatus}</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Plan Status
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {dashboardData.planStatus}
+                  </p>
                 </div>
-                <div className="p-3 rounded-full bg-green-100 text-green-500">📋</div>
+                <div className="p-3 rounded-full bg-green-100 text-green-500">
+                  📋
+                </div>
               </div>
-              <p className="mt-2 text-sm text-green-600">{dashboardData.daysRemaining} days remaining</p>
+              <p className="mt-2 text-sm text-green-600">
+                {dashboardData.daysRemaining} days remaining
+              </p>
             </div>
 
             <div className="bg-white rounded-lg shadow p-6">
@@ -270,11 +318,19 @@ const Dashboard = () => {
                   <p className="text-sm font-medium text-gray-600">
                     Low Stock Items
                   </p>
-                  <p className="text-2xl font-bold text-gray-900">{lowStockItems.length}</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {lowStockItems.length}
+                  </p>
                 </div>
-                <div className="p-3 rounded-full bg-red-100 text-red-500">⚠️</div>
+                <div className="p-3 rounded-full bg-red-100 text-red-500">
+                  ⚠️
+                </div>
               </div>
-              <p className="mt-2 text-sm text-red-600">{lowStockItems.length > 0 ? 'Action needed' : 'Stock levels good'}</p>
+              <p className="mt-2 text-sm text-red-600">
+                {lowStockItems.length > 0
+                  ? "Action needed"
+                  : "Stock levels good"}
+              </p>
             </div>
           </div>
         </>
@@ -330,7 +386,9 @@ const Dashboard = () => {
                 highlightOnHover
                 striped
                 noDataComponent={
-                  <div className="p-4 text-center text-gray-500">No recent sales data available</div>
+                  <div className="p-4 text-center text-gray-500">
+                    No recent sales data available
+                  </div>
                 }
               />
             ) : (
@@ -374,7 +432,9 @@ const Dashboard = () => {
               highlightOnHover
               striped
               noDataComponent={
-                <div className="p-4 text-center text-gray-500">No low stock items found</div>
+                <div className="p-4 text-center text-gray-500">
+                  No low stock items found
+                </div>
               }
             />
           ) : (

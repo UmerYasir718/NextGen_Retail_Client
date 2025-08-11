@@ -17,6 +17,22 @@ const InventoryModal = ({
   const { user } = useSelector((state) => state.auth);
   const { selectedCompany } = useSelector((state) => state.company);
 
+  // Accordion state for form sections
+  const [openSections, setOpenSections] = useState({
+    basicInfo: true,
+    inventoryDetails: false,
+    locationInfo: false,
+    pricingInfo: false,
+    statusInfo: false,
+  });
+
+  const toggleSection = (section) => {
+    setOpenSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
+
   // Form state
   const [formData, setFormData] = useState({
     name: "",
@@ -371,44 +387,61 @@ const InventoryModal = ({
                 </h3>
 
                 <form onSubmit={handleSubmit}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {/* Basic Information */}
-                    <div className="mb-6">
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  <div className="space-y-6">
+                    {/* Basic Information Accordion */}
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => toggleSection("basicInfo")}
+                        className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex items-center justify-between text-left"
+                      >
+                        <h4 className="text-md font-medium text-gray-900">
                         Basic Information
-                      </h3>
-                      <div className="bg-white rounded-lg shadow overflow-hidden mb-4">
-                        <table className="min-w-full divide-y divide-gray-200">
+                        </h4>
+                        <svg
+                          className={`w-5 h-5 text-gray-500 transform transition-transform ${
+                            openSections.basicInfo ? "rotate-180" : ""
+                          }`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </button>
+
+                      {openSections.basicInfo && (
+                        <div className="border-t border-gray-200">
+                          <table className="min-w-full">
                           <thead className="bg-gray-50">
                             <tr>
-                              <th
-                                scope="col"
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                              >
-                                Field
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                                  FIELD
                               </th>
-                              <th
-                                scope="col"
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                              >
-                                Value
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  VALUE
                               </th>
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
                             {/* Item Name */}
                             <tr>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-200">
                                 Item Name
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-4 py-3">
                                 <input
                                   type="text"
                                   name="name"
                                   value={formData.name}
                                   onChange={handleInputChange}
                                   disabled={mode === "view"}
-                                  className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                                 {errors.name && (
                                   <p className="mt-1 text-sm text-red-500">
@@ -420,17 +453,17 @@ const InventoryModal = ({
 
                             {/* SKU */}
                             <tr>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                SKU*
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-200">
+                                  SKU <span className="text-red-500">*</span>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-4 py-3">
                                 <input
                                   type="text"
                                   name="sku"
                                   value={formData.sku}
                                   onChange={handleInputChange}
                                   disabled={mode === "view"}
-                                  className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                                 {errors.sku && (
                                   <p className="mt-1 text-sm text-red-500">
@@ -442,33 +475,34 @@ const InventoryModal = ({
 
                             {/* Tag ID */}
                             <tr>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-200">
                                 Tag ID
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-4 py-3">
                                 <input
                                   type="text"
                                   name="tagId"
                                   value={formData.tagId}
                                   onChange={handleInputChange}
                                   disabled={mode === "view"}
-                                  className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                               </td>
                             </tr>
 
                             {/* Category */}
                             <tr>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                Category*
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-200">
+                                  Category{" "}
+                                  <span className="text-red-500">*</span>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-4 py-3">
                                 <select
                                   name="category"
                                   value={formData.category}
                                   onChange={handleInputChange}
                                   disabled={mode === "view"}
-                                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                   <option value="">Select a category</option>
                                   {categoryOptions.map((category) => (
@@ -487,779 +521,402 @@ const InventoryModal = ({
 
                             {/* Description */}
                             <tr>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-200">
                                 Description
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-4 py-3">
                                 <textarea
                                   name="description"
                                   rows="3"
                                   value={formData.description}
                                   onChange={handleInputChange}
                                   disabled={mode === "view"}
-                                  className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                                ></textarea>
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical"
+                                  />
                               </td>
                             </tr>
                           </tbody>
                         </table>
                       </div>
+                      )}
                     </div>
 
-                    {/* Inventory Details */}
-                    <div className="mb-6">
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    {/* Inventory Details Accordion */}
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => toggleSection("inventoryDetails")}
+                        className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex items-center justify-between text-left"
+                      >
+                        <h4 className="text-md font-medium text-gray-900">
                         Inventory Details
-                      </h3>
-                      <div className="bg-white rounded-lg shadow overflow-hidden mb-4">
-                        <table className="min-w-full divide-y divide-gray-200">
+                        </h4>
+                        <svg
+                          className={`w-5 h-5 text-gray-500 transform transition-transform ${
+                            openSections.inventoryDetails ? "rotate-180" : ""
+                          }`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </button>
+
+                      {openSections.inventoryDetails && (
+                        <div className="border-t border-gray-200">
+                          <table className="min-w-full">
                           <thead className="bg-gray-50">
                             <tr>
-                              <th
-                                scope="col"
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                              >
-                                Field
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                                  FIELD
                               </th>
-                              <th
-                                scope="col"
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                              >
-                                Value
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  VALUE
                               </th>
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
-                            {/* SKU */}
+                              {/* Quantity */}
                             <tr>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                SKU*
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-200">
+                                  Quantity{" "}
+                                  <span className="text-red-500">*</span>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-4 py-3">
                                 <input
-                                  type="text"
-                                  id="sku"
-                                  name="sku"
-                                  value={formData.sku}
+                                    type="number"
+                                    name="quantity"
+                                    value={formData.quantity}
                                   onChange={handleInputChange}
                                   disabled={mode === "view"}
-                                  className={`form-input w-full ${
-                                    errors.sku ? "border-red-500" : ""
-                                  }`}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    min="0"
                                 />
-                                {errors.sku && (
+                                  {errors.quantity && (
                                   <p className="mt-1 text-sm text-red-500">
-                                    {errors.sku}
+                                      {errors.quantity}
                                   </p>
                                 )}
                               </td>
                             </tr>
 
-                            {/* Tag ID */}
+                              {/* Threshold */}
                             <tr>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                Tag ID
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-200">
+                                  Threshold
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-4 py-3">
                                 <input
-                                  type="text"
-                                  id="tagId"
-                                  name="tagId"
-                                  value={formData.tagId}
+                                    type="number"
+                                    name="threshold"
+                                    value={formData.threshold}
                                   onChange={handleInputChange}
                                   disabled={mode === "view"}
-                                  className="form-input w-full"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    min="0"
                                 />
                               </td>
                             </tr>
-                            {/* Category */}
+
+                              {/* Status */}
                             <tr>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                Category*
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-200">
+                                  Status
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-4 py-3">
                                 <select
-                                  id="category"
-                                  name="category"
-                                  value={formData.category}
+                                    name="status"
+                                    value={formData.status}
                                   onChange={handleInputChange}
                                   disabled={mode === "view"}
-                                  className={`form-select w-full ${
-                                    errors.category ? "border-red-500" : ""
-                                  }`}
-                                >
-                                  <option value="">Select a category</option>
-                                  {categoryOptions.map((category) => (
-                                    <option key={category} value={category}>
-                                      {category}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  >
+                                    <option value="Available">Available</option>
+                                    <option value="Out of Stock">
+                                      Out of Stock
                                     </option>
-                                  ))}
+                                    <option value="Low Stock">Low Stock</option>
+                                    <option value="Discontinued">
+                                      Discontinued
+                                    </option>
                                 </select>
-                                {errors.category && (
-                                  <p className="mt-1 text-sm text-red-500">
-                                    {errors.category}
-                                  </p>
-                                )}
                               </td>
                             </tr>
-                            {/* Description */}
+
+                              {/* Inventory Status */}
                             <tr>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                Description
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-200">
+                                  Inventory Status
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                <textarea
-                                  id="description"
-                                  name="description"
-                                  rows="3"
-                                  value={formData.description}
+                                <td className="px-4 py-3">
+                                  <select
+                                    name="inventoryStatus"
+                                    value={formData.inventoryStatus}
                                   onChange={handleInputChange}
                                   disabled={mode === "view"}
-                                  className="form-textarea w-full"
-                                ></textarea>
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  >
+                                    <option value="purchase">Purchase</option>
+                                    <option value="sale_pending">
+                                      Sale Pending
+                                    </option>
+                                    <option value="sale">Sale</option>
+                                  </select>
                               </td>
                             </tr>
                           </tbody>
                         </table>
-                        {/* Location Information */}
-                        <div className="mb-6">
-                          <h3 className="text-lg font-medium text-gray-900 mb-4">
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Location Information Accordion */}
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => toggleSection("locationInfo")}
+                        className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex items-center justify-between text-left"
+                      >
+                        <h4 className="text-md font-medium text-gray-900">
                             Location Information (Optional)
-                          </h3>
-                          <div className="bg-white rounded-lg shadow overflow-hidden mb-4">
-                            <table className="min-w-full divide-y divide-gray-200">
+                        </h4>
+                        <svg
+                          className={`w-5 h-5 text-gray-500 transform transition-transform ${
+                            openSections.locationInfo ? "rotate-180" : ""
+                          }`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </button>
+
+                      {openSections.locationInfo && (
+                        <div className="border-t border-gray-200">
+                          <table className="min-w-full">
                               <thead className="bg-gray-50">
                                 <tr>
-                                  <th
-                                    scope="col"
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                  >
-                                    Field
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                                  FIELD
                                   </th>
-                                  <th
-                                    scope="col"
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                  >
-                                    Value
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  VALUE
                                   </th>
                                 </tr>
                               </thead>
                               <tbody className="bg-white divide-y divide-gray-200">
                                 {/* Warehouse */}
                                 <tr>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-200">
                                     Warehouse
                                   </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-4 py-3">
                                     <select
                                       name="location.warehouseId"
                                       value={formData.location.warehouseId}
                                       onChange={handleInputChange}
                                       disabled={mode === "view"}
-                                      className={`form-select w-full ${
-                                        errors["location.warehouseId"]
-                                          ? "border-red-500"
-                                          : "border-gray-300"
-                                      } ${
-                                        mode === "view" ? "bg-gray-100" : ""
-                                      }`}
-                                    >
-                                      <option value="">
-                                        Select a warehouse
-                                      </option>
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  >
+                                    <option value="">Select a warehouse</option>
                                       {warehouseOptions.map((warehouse) => (
                                         <option
-                                          key={warehouse.id}
-                                          value={warehouse.id}
+                                          key={warehouse._id}
+                                          value={warehouse._id}
                                         >
                                           {warehouse.name}
                                         </option>
                                       ))}
                                     </select>
-                                    {errors["location.warehouseId"] && (
-                                      <p className="mt-1 text-sm text-red-500">
-                                        {errors["location.warehouseId"]}
-                                      </p>
-                                    )}
                                   </td>
                                 </tr>
 
                                 {/* Zone */}
                                 <tr>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-200">
                                     Zone
                                   </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-4 py-3">
                                     <select
                                       name="location.zoneId"
                                       value={formData.location.zoneId}
                                       onChange={handleInputChange}
-                                      disabled={
-                                        mode === "view" ||
-                                        !formData.location.warehouseId
-                                      }
-                                      className={`form-select w-full ${
-                                        errors["location.zoneId"]
-                                          ? "border-red-500"
-                                          : "border-gray-300"
-                                      } ${
-                                        mode === "view" ||
-                                        !formData.location.warehouseId
-                                          ? "bg-gray-100"
-                                          : ""
-                                      }`}
+                                    disabled={mode === "view"}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     >
                                       <option value="">Select a zone</option>
                                       {zoneOptions.map((zone) => (
-                                        <option key={zone.id} value={zone.id}>
+                                        <option key={zone._id} value={zone._id}>
                                           {zone.name}
                                         </option>
                                       ))}
                                     </select>
-                                    {errors["location.zoneId"] && (
-                                      <p className="mt-1 text-sm text-red-500">
-                                        {errors["location.zoneId"]}
-                                      </p>
-                                    )}
                                   </td>
                                 </tr>
 
                                 {/* Shelf */}
                                 <tr>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-200">
                                     Shelf
                                   </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-4 py-3">
                                     <select
                                       name="location.shelfId"
                                       value={formData.location.shelfId}
                                       onChange={handleInputChange}
-                                      disabled={
-                                        mode === "view" ||
-                                        !formData.location.zoneId
-                                      }
-                                      className={`form-select w-full ${
-                                        errors["location.shelfId"]
-                                          ? "border-red-500"
-                                          : "border-gray-300"
-                                      } ${
-                                        mode === "view" ||
-                                        !formData.location.zoneId
-                                          ? "bg-gray-100"
-                                          : ""
-                                      }`}
+                                    disabled={mode === "view"}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     >
                                       <option value="">Select a shelf</option>
                                       {shelfOptions.map((shelf) => (
-                                        <option key={shelf.id} value={shelf.id}>
+                                      <option key={shelf._id} value={shelf._id}>
                                           {shelf.name}
                                         </option>
                                       ))}
                                     </select>
-                                    {errors["location.shelfId"] && (
-                                      <p className="mt-1 text-sm text-red-500">
-                                        {errors["location.shelfId"]}
-                                      </p>
-                                    )}
                                   </td>
                                 </tr>
 
                                 {/* Bin */}
                                 <tr>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-200">
                                     Bin
                                   </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-4 py-3">
                                     <select
                                       name="location.binId"
                                       value={formData.location.binId}
                                       onChange={handleInputChange}
-                                      disabled={
-                                        mode === "view" ||
-                                        !formData.location.shelfId
-                                      }
-                                      className={`form-select w-full ${
-                                        errors["location.binId"]
-                                          ? "border-red-500"
-                                          : "border-gray-300"
-                                      } ${
-                                        mode === "view" ||
-                                        !formData.location.shelfId
-                                          ? "bg-gray-100"
-                                          : ""
-                                      }`}
+                                    disabled={mode === "view"}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     >
                                       <option value="">Select a bin</option>
                                       {binOptions.map((bin) => (
-                                        <option key={bin.id} value={bin.id}>
+                                        <option key={bin._id} value={bin._id}>
                                           {bin.name}
                                         </option>
                                       ))}
                                     </select>
-                                    {errors["location.binId"] && (
-                                      <p className="mt-1 text-sm text-red-500">
-                                        {errors["location.binId"]}
-                                      </p>
-                                    )}
                                   </td>
                                 </tr>
                               </tbody>
                             </table>
                           </div>
+                      )}
                         </div>
 
-                        {/* Pricing Information */}
-                        <div className="mb-6">
-                          <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    {/* Pricing Information Accordion */}
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => toggleSection("pricingInfo")}
+                        className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex items-center justify-between text-left"
+                      >
+                        <h4 className="text-md font-medium text-gray-900">
                             Pricing Information
-                          </h3>
-                          <div className="bg-white rounded-lg shadow overflow-hidden mb-4">
-                            <table className="min-w-full divide-y divide-gray-200">
+                        </h4>
+                        <svg
+                          className={`w-5 h-5 text-gray-500 transform transition-transform ${
+                            openSections.pricingInfo ? "rotate-180" : ""
+                          }`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </button>
+
+                      {openSections.pricingInfo && (
+                        <div className="border-t border-gray-200">
+                          <table className="min-w-full">
                               <thead className="bg-gray-50">
                                 <tr>
-                                  <th
-                                    scope="col"
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                  >
-                                    Field
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                                  FIELD
                                   </th>
-                                  <th
-                                    scope="col"
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                  >
-                                    Value
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  VALUE
                                   </th>
                                 </tr>
                               </thead>
                               <tbody className="bg-white divide-y divide-gray-200">
                                 {/* Cost Price */}
                                 <tr>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-200">
                                     Cost Price
                                   </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-4 py-3">
                                     <input
                                       type="number"
                                       name="price.cost"
                                       value={formData.price.cost}
                                       onChange={handleInputChange}
                                       disabled={mode === "view"}
-                                      className={`form-input w-full ${
-                                        errors["price.cost"]
-                                          ? "border-red-500"
-                                          : "border-gray-300"
-                                      } ${
-                                        mode === "view" ? "bg-gray-100" : ""
-                                      }`}
-                                    />
-                                    {errors["price.cost"] && (
-                                      <p className="mt-1 text-sm text-red-500">
-                                        {errors["price.cost"]}
-                                      </p>
-                                    )}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    min="0"
+                                    step="0.01"
+                                  />
                                   </td>
                                 </tr>
 
                                 {/* Retail Price */}
                                 <tr>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-200">
                                     Retail Price
                                   </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-4 py-3">
                                     <input
                                       type="number"
                                       name="price.retail"
                                       value={formData.price.retail}
                                       onChange={handleInputChange}
                                       disabled={mode === "view"}
-                                      className={`form-input w-full ${
-                                        errors["price.retail"]
-                                          ? "border-red-500"
-                                          : "border-gray-300"
-                                      } ${
-                                        mode === "view" ? "bg-gray-100" : ""
-                                      }`}
-                                    />
-                                    {errors["price.retail"] && (
-                                      <p className="mt-1 text-sm text-red-500">
-                                        {errors["price.retail"]}
-                                      </p>
-                                    )}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    min="0"
+                                    step="0.01"
+                                  />
                                   </td>
                                 </tr>
                               </tbody>
                             </table>
                           </div>
-                        </div>
-
-                        {/* Remove duplicate pricing section */}
-
-                        {/* Inventory Details */}
-                        <div className="col-span-1 md:col-span-2 lg:col-span-3">
-                          <h4 className="text-md font-medium text-gray-700 mb-2 mt-4">
-                            Inventory Details
-                          </h4>
-                          <div className="border-b border-gray-200 mb-4"></div>
-                        </div>
-
-                        {/* Quantity */}
-                        <div className="mb-4">
-                          <label
-                            htmlFor="quantity"
-                            className="block text-sm font-medium text-gray-700 mb-1"
-                          >
-                            Quantity*
-                          </label>
-                          <input
-                            type="number"
-                            id="quantity"
-                            name="quantity"
-                            value={formData.quantity}
-                            onChange={handleInputChange}
-                            disabled={mode === "view"}
-                            className={`w-full px-3 py-2 border rounded-md ${
-                              errors.quantity
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            } ${mode === "view" ? "bg-gray-100" : ""}`}
-                          />
-                          {errors.quantity && (
-                            <p className="text-red-500 text-xs mt-1">
-                              {errors.quantity}
-                            </p>
                           )}
                         </div>
 
-                        {/* Threshold */}
-                        <div className="mb-4">
-                          <label
-                            htmlFor="threshold"
-                            className="block text-sm font-medium text-gray-700 mb-1"
-                          >
-                            Threshold
-                          </label>
-                          <input
-                            type="number"
-                            id="threshold"
-                            name="threshold"
-                            value={formData.threshold}
-                            onChange={handleInputChange}
-                            disabled={mode === "view"}
-                            className={`w-full px-3 py-2 border rounded-md ${
-                              errors.threshold
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            } ${mode === "view" ? "bg-gray-100" : ""}`}
-                          />
-                        </div>
-
-                        {/* Status */}
-                        <div className="mb-4">
-                          <label
-                            htmlFor="status"
-                            className="block text-sm font-medium text-gray-700 mb-1"
-                          >
-                            Status
-                          </label>
-                          <select
-                            id="status"
-                            name="status"
-                            value={formData.status}
-                            onChange={handleInputChange}
-                            disabled={mode === "view"}
-                            className={`w-full px-3 py-2 border rounded-md ${
-                              errors.status
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            } ${mode === "view" ? "bg-gray-100" : ""}`}
-                          >
-                            <option value="Available">Available</option>
-                            <option value="Low Stock">Low Stock</option>
-                            <option value="Out of Stock">Out of Stock</option>
-                            <option value="Discontinued">Discontinued</option>
-                          </select>
-                        </div>
-
-                        {/* Inventory Status */}
-                        <div className="mb-4">
-                          <label
-                            htmlFor="inventoryStatus"
-                            className="block text-sm font-medium text-gray-700 mb-1"
-                          >
-                            Inventory Status
-                          </label>
-                          <select
-                            id="inventoryStatus"
-                            name="inventoryStatus"
-                            value={formData.inventoryStatus}
-                            onChange={handleInputChange}
-                            disabled={mode === "view"}
-                            className={`w-full px-3 py-2 border rounded-md ${
-                              errors.inventoryStatus
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            } ${mode === "view" ? "bg-gray-100" : ""}`}
-                          >
-                            <option value="purchase">Purchase</option>
-                            <option value="sale_pending">Sale Pending</option>
-                            <option value="sale">Sale</option>
-                          </select>
-                        </div>
-
-                        {/* Location */}
-                        <div className="col-span-1 md:col-span-2 lg:col-span-3">
-                          <h4 className="text-md font-medium text-gray-700 mb-2 mt-4">
-                            Location
-                          </h4>
-                          <div className="border-b border-gray-200 mb-4"></div>
-                        </div>
-
-                        {/* Warehouse */}
-                        <div className="mb-4">
-                          <label
-                            htmlFor="location.warehouseId"
-                            className="block text-sm font-medium text-gray-700 mb-1"
-                          >
-                            Warehouse
-                          </label>
-                          <select
-                            id="location.warehouseId"
-                            name="location.warehouseId"
-                            value={formData.location.warehouseId}
-                            onChange={handleInputChange}
-                            disabled={mode === "view" || loadingWarehouses}
-                            className={`w-full px-3 py-2 border rounded-md ${
-                              errors["location.warehouseId"]
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            } ${mode === "view" ? "bg-gray-100" : ""}`}
-                          >
-                            <option value="">
-                              {loadingWarehouses
-                                ? "Loading warehouses..."
-                                : "Select Warehouse"}
-                            </option>
-                            {warehouseOptions.map((warehouse) => (
-                              <option key={warehouse._id} value={warehouse._id}>
-                                {warehouse.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* Zone */}
-                        <div className="mb-4">
-                          <label
-                            htmlFor="location.zoneId"
-                            className="block text-sm font-medium text-gray-700 mb-1"
-                          >
-                            Zone
-                          </label>
-                          <select
-                            id="location.zoneId"
-                            name="location.zoneId"
-                            value={formData.location.zoneId}
-                            onChange={handleInputChange}
-                            disabled={
-                              mode === "view" ||
-                              loadingZones ||
-                              !formData.location.warehouseId
-                            }
-                            className={`w-full px-3 py-2 border rounded-md ${
-                              errors["location.zoneId"]
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            } ${mode === "view" ? "bg-gray-100" : ""}`}
-                          >
-                            <option value="">
-                              {!formData.location.warehouseId
-                                ? "Select warehouse first"
-                                : loadingZones
-                                ? "Loading zones..."
-                                : "Select Zone"}
-                            </option>
-                            {zoneOptions.map((zone) => (
-                              <option key={zone._id} value={zone._id}>
-                                {zone.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* Shelf */}
-                        <div className="mb-4">
-                          <label
-                            htmlFor="location.shelfId"
-                            className="block text-sm font-medium text-gray-700 mb-1"
-                          >
-                            Shelf
-                          </label>
-                          <select
-                            id="location.shelfId"
-                            name="location.shelfId"
-                            value={formData.location.shelfId}
-                            onChange={handleInputChange}
-                            disabled={
-                              mode === "view" ||
-                              loadingShelves ||
-                              !formData.location.zoneId
-                            }
-                            className={`w-full px-3 py-2 border rounded-md ${
-                              errors["location.shelfId"]
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            } ${mode === "view" ? "bg-gray-100" : ""}`}
-                          >
-                            <option value="">
-                              {!formData.location.zoneId
-                                ? "Select zone first"
-                                : loadingShelves
-                                ? "Loading shelves..."
-                                : "Select Shelf"}
-                            </option>
-                            {shelfOptions.map((shelf) => (
-                              <option key={shelf._id} value={shelf._id}>
-                                {shelf.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* Bin */}
-                        <div className="mb-4">
-                          <label
-                            htmlFor="location.binId"
-                            className="block text-sm font-medium text-gray-700 mb-1"
-                          >
-                            Bin
-                          </label>
-                          <select
-                            id="location.binId"
-                            name="location.binId"
-                            value={formData.location.binId}
-                            onChange={handleInputChange}
-                            disabled={
-                              mode === "view" ||
-                              loadingBins ||
-                              !formData.location.shelfId
-                            }
-                            className={`w-full px-3 py-2 border rounded-md ${
-                              errors["location.binId"]
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            } ${mode === "view" ? "bg-gray-100" : ""}`}
-                          >
-                            <option value="">
-                              {!formData.location.shelfId
-                                ? "Select shelf first"
-                                : loadingBins
-                                ? "Loading bins..."
-                                : "Select Bin"}
-                            </option>
-                            {binOptions.map((bin) => (
-                              <option key={bin._id} value={bin._id}>
-                                {bin.name}
-                              </option>
-                            ))}
-                          </select>
-                          {/* {errors["location.binId"] && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {errors["location.binId"]}
-                        </p>
-                      )} */}
-                        </div>
-
-                        {/* Pricing */}
-                        <div className="col-span-1 md:col-span-2 lg:col-span-3">
-                          <h4 className="text-md font-medium text-gray-700 mb-2 mt-4">
-                            Pricing
-                          </h4>
-                          <div className="border-b border-gray-200 mb-4"></div>
-                        </div>
-
-                        {/* Cost Price */}
-                        <div className="mb-4">
-                          <label
-                            htmlFor="price.cost"
-                            className="block text-sm font-medium text-gray-700 mb-1"
-                          >
-                            Cost Price
-                          </label>
-                          <input
-                            type="number"
-                            id="price.cost"
-                            name="price.cost"
-                            value={formData.price.cost}
-                            onChange={handleInputChange}
-                            disabled={mode === "view"}
-                            className={`w-full px-3 py-2 border rounded-md ${
-                              errors["price.cost"]
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            } ${mode === "view" ? "bg-gray-100" : ""}`}
-                            step="0.01"
-                          />
-                          {errors["price.cost"] && (
-                            <p className="text-red-500 text-xs mt-1">
-                              {errors["price.cost"]}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Retail Price */}
-                        <div className="mb-4">
-                          <label
-                            htmlFor="price.retail"
-                            className="block text-sm font-medium text-gray-700 mb-1"
-                          >
-                            Retail Price
-                          </label>
-                          <input
-                            type="number"
-                            id="price.retail"
-                            name="price.retail"
-                            value={formData.price.retail}
-                            onChange={handleInputChange}
-                            disabled={mode === "view"}
-                            className={`w-full px-3 py-2 border rounded-md ${
-                              errors["price.retail"]
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            } ${mode === "view" ? "bg-gray-100" : ""}`}
-                            step="0.01"
-                          />
-                          {errors["price.retail"] && (
-                            <p className="text-red-500 text-xs mt-1">
-                              {errors["price.retail"]}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Form Actions */}
-                      <div className="mt-8 flex justify-end space-x-3">
+                    {/* Action Buttons */}
+                    <div className="flex justify-end space-x-4 pt-6 border-t">
                         <button
                           type="button"
-                          className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
                           onClick={onClose}
+                        className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
                         >
                           Cancel
                         </button>
-
-                        {mode !== "view" && (
                           <button
                             type="submit"
-                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                             disabled={isSubmitting}
-                          >
-                            {isSubmitting
-                              ? "Saving..."
-                              : mode === "add"
-                              ? "Add Item"
-                              : "Update Item"}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {isSubmitting ? "Saving..." : "Save Item"}
                           </button>
-                        )}
-                      </div>
                     </div>
                   </div>
                 </form>
